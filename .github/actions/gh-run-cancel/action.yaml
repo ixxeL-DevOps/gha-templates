@@ -1,0 +1,29 @@
+---
+name: Github run cancel
+description: Cancelling a workflow on Github
+author: ixxeL
+inputs:
+  run-id:
+    required: true
+    description: ID of the current run to cancel
+
+runs:
+  using: composite
+  steps:
+    - id: gh-cancel
+      run: |
+        echo -e "${BLUE}[ STEP - CANCEL GH ] > Cancel a workflow run${BLANK}"
+        echo -e "${CYAN}[ INFO ] > gh version.${BLANK}"
+        gh --version
+
+        echo -e "${YELLOW}[ EXECUTING ] > Cancelling workflow run ${{ inputs.run-id }}${BLANK}"
+        gh run cancel ${{ inputs.run-id }}
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

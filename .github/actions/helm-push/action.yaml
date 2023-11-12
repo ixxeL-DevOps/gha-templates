@@ -1,0 +1,146 @@
+---
+name: Helm push
+description: Push Helm chart with helm CLI
+author: ixxeL
+inputs:
+  prepare:
+    description: Prepare the job when not running in adequate environment
+    required: false
+    default: "false"
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  chart-name:
+    description: name of the chart
+    required: false
+  chart-version:
+    description: version of the chart
+    required: false
+  chart-appversion:
+    description: appversion of the chart
+    required: false
+  devel:
+    required: false
+    default: "false"
+    description: use devel mode
+  repo-name:
+    required: false
+    default: test
+    description: name of the repo
+  repo-url:
+    required: true
+    description: url of the repo
+  repo-username:
+    required: true
+    description: user name of the repo
+  repo-password:
+    required: true
+    description: password of the repo
+  force-update:
+    required: false
+    default: "true"
+    description: force update mode
+  skip-tls:
+    required: false
+    default: "true"
+    description: skip tls verification
+  push-type:
+    required: false
+    default: chartmuseum
+    description: type of pushing to
+  pkg-path:
+    required: true
+    description: path of the helm package
+
+runs:
+  using: composite
+  steps:
+    - id: prepare
+      if: ${{ inputs.prepare == 'true' }}
+      shell: bash
+      run: |
+        echo -e "${YELLOW}[ EXECUTING ] > Installing dependencies${BLANK}"
+        helm plugin install https://github.com/chartmuseum/helm-push
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m
+    - id: helm-push
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - Helm-chart Pushing ] > Pushing Helm chart.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Helm version.${BLANK}"
+        helm version --short
+
+        echo -e "${YELLOW}[ EXECUTING ] > Adding helm repository ${{ inputs.repo-name }} ${{ inputs.repo-url }}.${BLANK}"
+        helm repo add ${{ inputs.repo-name }} ${{ inputs.repo-url }} --force-update=${{ inputs.force-update }} \
+                                                        --insecure-skip-tls-verify=${{ inputs.skip-tls }} \
+                                                        --username ${{ inputs.repo-username }} \
+                                                        --password ${{ inputs.repo-password }}
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ SUCCESS ] > Helm repo ${{ inputs.repo-name }} ${{ inputs.repo-url }} added successfully !${BLANK}"
+          echo -e "${CYAN}[ INFO ] > Displaying added repository${BLANK}"
+          helm repo list
+          echo -e "${CYAN}[ INFO ] > Displaying current charts in ${{ inputs.repo-name }}${BLANK}"
+          helm search repo ${{ inputs.repo-name }} --devel=${{ inputs.devel }}
+        else
+          echo -e "${RED}[ ERROR ] > Helm repo ${{ inputs.repo-name }} ${{ inputs.repo-url }} failed to be added !${BLANK}"
+          exit 1
+        fi
+
+        echo -e "${YELLOW}[ EXECUTING ] > Checking if version ${{ inputs.chart-version }} already exists${BLANK}"
+        EXIST=$(helm search repo ${{ inputs.repo-name }}/${{ inputs.chart-name }} --versions --devel=${{ inputs.devel }} --output json | jq -r ".[] | select(.version|test(\"${{ inputs.chart-version }}\")) | .version" | sort -V | tail -1)
+        if [[ "${EXIST}" = "" ]]
+        then
+          echo -e "${GREEN}[ CHECK OK ] > Version ${{ inputs.chart-version }} doesn't exist yet${BLANK}"
+          echo -e "${YELLOW}[ EXECUTING ] > Pushing helm chart ${PURPLE}${{ inputs.chart-name }}${YELLOW} version ${PURPLE}${{ inputs.chart-version }}${YELLOW} and appVersion ${PURPLE}${{ inputs.chart-appversion }}${YELLOW} to helm repo ${{ inputs.repo-name }}@${{ inputs.repo-url }}.${BLANK}"
+          echo -e "${CYAN}[ INFO ] > Helm chart location --> ${{ inputs.pkg-path }}${BLANK}"
+
+          if [[ ${{ inputs.push-type }} = "chartmuseum" ]]
+          then
+            echo -e "${CYAN}[ INFO ] > Using helm-push chartmuseum plugin${BLANK}"
+            helm cm-push ${{ inputs.pkg-path }} ${{ inputs.repo-name }}
+          elif [[ ${{ inputs.push-type }} = "jfrog" ]]
+          then
+            echo -e "${CYAN}[ INFO ] > Jfrog Artifactory token push method${BLANK}"
+            PUT_URL=${{ inputs.repo-url }}
+            curl -H "X-JFrog-Art-Api:${{ inputs.repo-password }}" -fk -X PUT "${PUT_URL}" --upload-file ${{ inputs.pkg-path }}
+          else
+            if [[ ${{ inputs.push-type }} = "harbor" ]]
+            then
+              POST_URL=$(echo ${{ inputs.repo-url }} | sed 's|chartrepo|api/chartrepo|' | sed -E "s|/$||" | sed 's|$|/charts|')
+              echo -e "${CYAN}[ INFO ] > Harbor push method --> ${POST_URL} ${BLANK}"
+            elif [[ ${{ inputs.push-type }} = "nexus" ]]
+            then
+              POST_URL=${{ inputs.repo-url }}
+              echo -e "${CYAN}[ INFO ] > Nexus push method --> ${POST_URL} ${BLANK}"
+            fi
+            curl -H "accept: application/json" -fku ${{ inputs.repo-username }}:${{ inputs.repo-password }} -X POST "${POST_URL}" --upload-file ${{ inputs.pkg-path }}
+          fi
+        else
+          echo -e "${PURPLE}[ CANCEL ] > chart ${YELLOW}${{ inputs.chart-name }}${PURPLE} version ${YELLOW}${{ inputs.chart-version }}${PURPLE} already exists on server. Operation canceled.${BLANK}"
+          exit 1
+        fi
+
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ SUCCESS ] > Helm push succeeded without any error${BLANK}"
+        else
+          echo -e "${RED}[ ERROR ] > Helm push didn't succeed !${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

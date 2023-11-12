@@ -1,0 +1,225 @@
+---
+name: Checkov scan
+description: Scanning files with Checkov
+author: ixxeL
+inputs:
+  prepare:
+    description: Prepare the job when not running in adequate environment
+    required: false
+    default: "true"
+  artefact:
+    description: Name of the file or directory to scan
+    required: true
+  compact:
+    required: false
+    default: "true"
+    description: use compact mode
+  quiet:
+    required: false
+    default: "false"
+    description: use quiet mode
+  skip-download:
+    required: false
+    default: "false"
+    description: display without guide
+  format:
+    required: false
+    default: cli
+    description: output format
+  soft-fail:
+    required: false
+    default: "true"
+    description: use soft fail mode
+  gate:
+    required: false
+    default: "50"
+    description: gate in %
+  skip-path:
+    required: false
+    description: path to exclude
+  skip-framework:
+    description: Filter scan to skip specific infrastructure as code frameworks
+    required: false
+  skip-check:
+    description: Each item may be either a Checkov check ID (CKV_AWS_123), a BC check ID (BC_AWS_GENERAL_123), or a severity (LOW, MEDIUM, HIGH, CRITICAL)
+    required: false
+  check:
+    description: Each item may be either a Checkov check ID (CKV_AWS_123), a BC check ID (BC_AWS_GENERAL_123), or a severity (LOW, MEDIUM, HIGH, CRITICAL)
+    required: false
+  framework:
+    description: Filter scan to run only on specific infrastructure code frameworks
+    required: false
+  workingdir:
+    required: false
+    default: .
+    description: working directory
+
+runs:
+  using: composite
+  steps:
+    - id: prepare
+      if: ${{ inputs.prepare == 'true' }}
+      shell: bash
+      run: |
+        echo -e "${YELLOW}[ EXECUTING ] > Installing dependencies${BLANK}"
+        pip3 install checkov
+        sudo apt install bc
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m
+    - id: checkov-scan
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - STATIC ANALYSIS ] > Analyzing with Checkov.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Python version.${BLANK}"
+        python -V
+        echo -e "${CYAN}[ INFO ] > Checkov version.${BLANK}"
+        checkov --version
+
+        OPTIONS=""
+        if [ ${{ inputs.quiet }} = true ]
+        then
+          echo -e "${CYAN}[ INFO ] > Displaying errors only.${BLANK}"
+          OPTIONS+=" --quiet"
+        fi
+        if [[ ${{ inputs.skip-download }} = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Displaying without guide.${BLANK}"
+          OPTIONS+=" --skip-download"
+        fi
+        if [[ ${{ inputs.compact }} = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Displaying with compact mode.${BLANK}"
+          OPTIONS+=" --compact"
+        fi
+        if [[ ${{ inputs.soft-fail }} = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Using soft-fail mode.${BLANK}"
+          OPTIONS+=" --soft-fail"
+        fi
+        if [[ "${{ inputs.skip-framework }}" ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Skiping framework --> ${{ inputs.skip-framework }}${BLANK}"
+          OPTIONS+=" --skip-framework ${{ inputs.skip-framework }}"
+        fi
+        if [[ "${{ inputs.framework }}" ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Framework --> ${{ inputs.framework }}${BLANK}"
+          OPTIONS+=" --framework ${{ inputs.framework }}"
+        fi
+        if [[ "${{ inputs.skip-path }}" ]]
+        then
+          export SKIP_PATH="${{ inputs.skip-path }}"
+          [[ ! "$SKIP_PATH" =~ ^\|.+ ]] || SKIP_PATH="${SKIP_PATH:1}"
+          full_str=${SKIP_PATH//|/ --skip-path }
+          SKIP_PATHS="--skip-path $full_str"
+          echo -e "${CYAN}[ INFO ] > Skip paths are the following${BLANK}"
+          echo "${SKIP_PATHS}"
+          OPTIONS+=" ${SKIP_PATHS}"
+        fi
+        if [[ "${{ inputs.skip-check }}" ]]
+        then
+          export SKIP_CHECK="${{ inputs.skip-check }}"
+          [[ ! "$SKIP_CHECK" =~ ^\|.+ ]] || SKIP_CHECK="${SKIP_CHECK:1}"
+          full_str=${SKIP_CHECK//|/ --skip-check }
+          SKIP_CHECKS="--skip-check $full_str"
+          echo -e "${CYAN}[ INFO ] > Skip checks are the following${BLANK}"
+          echo "${SKIP_CHECKS}"
+          OPTIONS+=" ${SKIP_CHECKS}"
+        fi
+        if [[ "${{ inputs.check }}" ]]
+        then
+          export CHECK="${{ inputs.check }}"
+          [[ ! "$CHECK" =~ ^\|.+ ]] || CHECK="${CHECK:1}"
+          full_str=${CHECK//|/ --check }
+          CHECKS="--check $full_str"
+          echo -e "${CYAN}[ INFO ] > Checks are the following${BLANK}"
+          echo "${CHECKS}"
+          OPTIONS+=" ${CHECKS}"
+        fi
+
+        echo -e "${YELLOW}[ EXECUTING ] > Executing static code analyzis on ${{ inputs.workingdir }}/${{ inputs.artefact }}${BLANK}"
+        if [[ -d ${{ inputs.workingdir }}/${{ inputs.artefact }} ]]
+        then
+          echo -e "${YELLOW}[ EXECUTING ] > Analyzing directory ${{ inputs.workingdir }}/${{ inputs.artefact }}.${BLANK}"
+          result=$(checkov -d ${{ inputs.workingdir }}/${{ inputs.artefact }} --output=junitxml ${OPTIONS})
+          json_result=$(checkov -d ${{ inputs.workingdir }}/${{ inputs.artefact }} --output=json ${OPTIONS})
+          if [[ "${{ inputs.format }}" != "json" ]]
+          then
+            script -q -e -c "checkov -d ${{ inputs.workingdir }}/${{ inputs.artefact }} --output=${{ inputs.format }} ${OPTIONS}"
+          else
+            checkov -d ${{ inputs.workingdir }}/${{ inputs.artefact }} --output=${{ inputs.format }} ${OPTIONS} | jq -C
+          fi
+        elif [[ -f ${{ inputs.workingdir }}/${{ inputs.artefact }} ]]
+        then
+          echo -e "${YELLOW}[ EXECUTING ] > Analyzing file ${{ inputs.workingdir }}/${{ inputs.artefact }}.${BLANK}"
+          result=$(checkov -f ${{ inputs.workingdir }}/${{ inputs.artefact }} --output=junitxml ${OPTIONS})
+          json_result=$(checkov -f ${{ inputs.workingdir }}/${{ inputs.artefact }} --output=json ${OPTIONS})
+          if [[ "${{ inputs.format }}" != "json" ]]
+          then
+            script -q -e -c "checkov -f ${{ inputs.workingdir }}/${{ inputs.artefact }} --output=${{ inputs.format }} ${OPTIONS}"
+          else
+            checkov -f ${{ inputs.workingdir }}/${{ inputs.artefact }} --output=${{ inputs.format }} ${OPTIONS} | jq -C
+          fi
+        else
+          echo -e "${RED}[ FAIL ] > Parameter '{{ inputs.artefact }}' --> ${{ inputs.artefact }} not valid !${BLANK}"
+          exit 1
+        fi
+        EXIT_CODE="${PIPESTATUS[0]}"
+        echo "${result}" > checkov-test.xml
+
+        passed=$(echo ${json_result} | jq 'if type == "array" then .[] else . end | .summary?.passed?')
+        failed=$(echo ${json_result} | jq 'if type == "array" then .[] else . end | .summary?.failed?')
+        totalPassed=0
+        for pass in "${passed[@]}"; do
+          totalPassed=$(echo | awk "{print ${pass}+${totalPassed}}")
+        done
+        totalFailed=0
+        for fail in "${failed[@]}"; do
+          totalFailed=$(echo | awk "{print ${fail}+${totalFailed}}")
+        done
+        total=$(echo | awk "{print ${totalPassed}+${totalFailed}}")
+        ratio=$(echo | awk "{print ${totalPassed}/${total}}")
+        SCAN_RATIO=$(echo | awk "{print ${ratio}*100}")
+
+        echo -e "${CYAN}[ INFO ] > Scan succeeded ${GREEN}${totalPassed}${CYAN} tests and failed ${RED}${totalFailed}${CYAN} tests${BLANK}"
+
+        if [[ ${EXIT_CODE} -ne 0 ]]
+        then
+          echo -e "${RED}[ FAIL ] > Checkov scan failed !${BLANK}"
+          echo -e "${RED}[ FAIL ] > Result scanning is ${PURPLE}${SCAN_RATIO} %${BLANK}"
+        else
+          echo -e "${GREEN}[ SUCCESS ] > Checkov scan succeeded !${BLANK}"
+          echo -e "${GREEN}[ SUCCESS ] > Result scanning is ${YELLOW}${SCAN_RATIO} %${BLANK}"
+        fi
+
+        if [[ ${{ inputs.gate }} -ne 0 ]]
+        then
+          echo -e "${YELLOW}[ EXECUTING ] > Evaluating gate --> Threshold set at ${{ inputs.gate }} %${BLANK}"
+          echo -e "${CYAN}[ INFO ] > Result scanning is ${SCAN_RATIO} %${BLANK}"
+
+          if [[ $(echo "${SCAN_RATIO} > ${{ inputs.gate }}" | bc) -ne 0 ]]
+          then
+            echo -e "${GREEN}[ SUCCESS ] > Checkov gate succeeded ==> ${YELLOW}${{ inputs.gate }} % < ${SCAN_RATIO} %${GREEN} result ${BLANK}"
+          else
+            echo -e "${RED}[ FAIL ] > Checkov gate failed ==> ${YELLOW}${{ inputs.gate }} % threshold > ${SCAN_RATIO} %${RED} result ${BLANK}"
+            exit 1
+          fi
+        else
+          echo -e "${YELLOW}[ EXECUTING ] > Skipping gate evaluation.${BLANK}"
+        fi
+        exit ${EXIT_CODE}
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

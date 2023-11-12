@@ -1,0 +1,390 @@
+---
+name: Helm chart build
+on:
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      git-admin-token:
+        required: false
+      git-token:
+        required: false
+      helm-registry-pwd:
+        required: false
+    inputs:
+      # General
+      release:
+        description: If release is true, will enable full workflow to push and release
+        required: false
+        default: false
+        type: boolean
+      workingdir:
+        required: false
+        type: string
+      runs-on:
+        description: OS to run jobs on
+        required: false
+        default: ubuntu-latest
+        type: string
+      helm-image:
+        description: Docker image used for CI jobs
+        required: false
+        default: ixxel/toolbox:helm-latest
+        type: string
+      auto-tag-repo:
+        description: Tag or not the repository
+        required: false
+        default: "false"
+        type: string
+        # Update version
+      auto-update-chart:
+        required: false
+        default: "false"
+        type: string
+      chart-increment:
+        required: false
+        default: fix
+        type: string
+        # helm unit tests
+      enable-unittests:
+        description: enable unit tests for helm
+        required: false
+        default: "false"
+        type: string
+      helm-plugin-version:
+        description: plugin version to download
+        required: false
+        default: v0.3.3
+        type: string
+      helm-with-subchart:
+        description: include subchart
+        required: false
+        default: true
+        type: boolean
+      helm-tests-dir:
+        description: tests directory relative to workingdir
+        required: false
+        default: tests/*.yaml
+        type: string
+      # helm kubeconform
+      helm-kubeconform-version:
+        description: plugin version to download
+        required: false
+        default: ""
+        type: string
+      helm-values-file-test:
+        description: values file to test the chart against
+        required: false
+        default: values.yaml
+        type: string
+        # Checkov
+      checkov-artefact:
+        required: false
+        type: string
+      checkov-compact:
+        required: false
+        default: true
+        type: boolean
+      checkov-quiet:
+        required: false
+        default: false
+        type: boolean
+      checkov-skip-download:
+        required: false
+        default: false
+        type: boolean
+      checkov-format:
+        required: false
+        default: cli
+        type: string
+      checkov-soft-fail:
+        required: false
+        default: true
+        type: boolean
+      checkov-gate:
+        required: false
+        default: "0"
+        type: string
+      checkov-skip-path:
+        required: false
+        type: string
+      checkov-skip-framework:
+        required: false
+        type: string
+      checkov-skip-check:
+        required: false
+        type: string
+      checkov-check:
+        required: false
+        type: string
+      checkov-framework:
+        required: false
+        default: helm
+        type: string
+        # helm template
+      helm-strict:
+        description: use strict mode
+        required: false
+        default: true
+        type: boolean
+      helm-chart-name:
+        description: name of the chart
+        required: false
+        type: string
+      helm-values-file:
+        description: name of the values.yaml file
+        required: false
+        default: values.yaml
+        type: string
+      helm-stdout-mode:
+        description: output template to stdout
+        required: false
+        default: true
+        type: boolean
+      helm-display-mode:
+        description: display template result to stdout
+        required: false
+        default: true
+        type: boolean
+      helm-output-dir:
+        description: output directory name for template file
+        required: false
+        default: helm-tpl-result
+        type: string
+      helm-output-file:
+        description: output file name for template file
+        required: false
+        default: result.yaml
+        type: string
+      # helm push
+      helm-devel:
+        required: false
+        default: false
+        type: boolean
+      helm-repo-name:
+        required: false
+        default: chartmuseum
+        type: string
+      helm-repo-url:
+        required: false
+        default: https://chartmuseum.k8s-app.fredcorp.com
+        type: string
+      helm-repo-username:
+        required: false
+        default: root
+        type: string
+      helm-force-update:
+        required: false
+        default: true
+        type: boolean
+      helm-skip-tls:
+        required: false
+        default: true
+        type: boolean
+      helm-push-type:
+        required: false
+        default: chartmuseum
+        type: string
+      # git tag/push
+      # git-staging-dir:
+      #   required: false
+      #   default: fullstack
+      #   type: string
+      push-option:
+        required: false
+        default: ci.skip
+        type: string
+      git-workdir:
+        required: false
+        default: .
+        type: string
+      # chart update
+      evaluate-update:
+        required: false
+        default: true
+        type: boolean
+      release-verify-tag:
+        required: false
+        default: false
+        type: boolean
+      release-target-branch:
+        required: false
+        default: ${{ github.ref_name }}
+        type: string
+      # Vault
+      vault-enabled:
+        required: false
+        default: false
+        type: boolean
+      vault-url:
+        required: false
+        default: https://vault.pp.dktapp.cloud
+        type: string
+      vault-namespace:
+        required: false
+        default: inix
+        type: string
+      vault-role:
+        required: false
+        default: whbox-ga-role
+        type: string
+
+env:
+  COMPONENT_NAME: ${{ inputs.workingdir }}
+jobs:
+  helm-build:
+    name: ⚓ Helm Chart build
+    timeout-minutes: 5
+    runs-on: self-hosted
+    # runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      # id-token: write
+    # container:
+    #   image: ${{ inputs.helm-image }}
+    steps:
+      - name: Clone code
+        id: git-clone
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+      - name: Helm linting
+        id: helm-lint
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-lint@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+      - name: Detect bump
+        id: detect-bump
+        uses: ixxeL-DevOps/gha-templates/.github/actions/detect-bump@main
+        with:
+          release-regex: '\s*:package: CI release of helm chart ${{ env.COMPONENT_NAME }}.+'
+          minor-regex: ^(feat(\/|-)[[:alnum:]_.-]+-\(${{ env.COMPONENT_NAME }}\).*)$
+          major-regex: ^((((feat|fix|chore|perf|refactor|build|ci|revert|test)!)|(!(feat|fix|chore|perf|refactor|build|ci|revert|test)))(\/|-)[[:alnum:]_.-]+-\(${{ env.COMPONENT_NAME }}\).*)$
+          searching-deepness: 20
+      - name: Bump version
+        id: bump-version
+        uses: ixxeL-DevOps/gha-templates/.github/actions/bump-version@main
+        with:
+          update: ${{ inputs.auto-update-chart }}
+          increment: ${{ steps.detect-bump.outputs.BUMP_KIND }}
+          current-version: ${{ steps.helm-lint.outputs.CHART_VERSION }}
+      - name: Helm Checkov scan
+        id: helm-checkov
+        uses: ixxeL-DevOps/gha-templates/.github/actions/checkov@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          artefact: ${{ inputs.checkov-artefact }}
+          compact: ${{ inputs.checkov-compact }}
+          quiet: ${{ inputs.checkov-quiet }}
+          skip-download: ${{ inputs.checkov-skip-download }}
+          format: ${{ inputs.checkov-format }}
+          soft-fail: ${{ inputs.checkov-soft-fail }}
+          gate: ${{ inputs.checkov-gate }}
+          skip-path: ${{ inputs.checkov-skip-path }}
+          skip-framework: ${{ inputs.checkov-skip-framework }}
+          skip-check: ${{ inputs.checkov-skip-check }}
+          check: ${{ inputs.checkov-check }}
+          framework: ${{ inputs.checkov-framework }}
+          prepare: "false"
+      - name: "\U0001F9EA Helm Unit testing"
+        id: helm-unittest
+        if: inputs.enable-unittests == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-unittest@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          with-subchart: ${{ inputs.helm-with-subchart }}
+          tests-dir: ${{ inputs.helm-tests-dir }}
+      - name: Helm Templating
+        id: helm-template
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          strict: ${{ inputs.helm-strict }}
+          chart-name: ${{ inputs.helm-chart-name }}
+          values-file: ${{ inputs.helm-values-file }}
+          set: ${{ inputs.helm-set }}
+          stdout-mode: ${{ inputs.helm-stdout-mode }}
+          display-mode: ${{ inputs.helm-display-mode }}
+          output-dir: ${{ inputs.helm-output-dir }}
+          output-file: ${{ inputs.helm-output-file }}
+      - name: Helm Kubeconform
+        id: helm-kubeconform
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-kubeconform@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          values-file: ${{ inputs.helm-values-file-test }}
+          plugin-version: ${{ inputs.helm-kubeconform-version }}
+      - name: Helm Packaging
+        id: helm-package
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-package@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          chart-name: ${{ steps.helm-lint.outputs.CHART_NAME }}
+          chart-version: ${{ steps.bump-version.outputs.VERSION }}
+          chart-appversion: ${{ steps.helm-lint.outputs.CHART_APP_VERSION }}
+          values-file: ${{ inputs.helm-values-file }}
+      - name: Helm pushing
+        id: helm-push
+        if: inputs.release
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-push@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          chart-name: ${{ steps.helm-lint.outputs.CHART_NAME }}
+          chart-version: ${{ steps.bump-version.outputs.VERSION }}
+          chart-appversion: ${{ steps.helm-lint.outputs.CHART_APP_VERSION }}
+          devel: ${{ inputs.helm-devel }}
+          repo-name: ${{ inputs.helm-repo-name }}
+          repo-url: ${{ inputs.helm-repo-url }}
+          repo-username: ${{ inputs.helm-repo-username }}
+          repo-password: ${{ secrets.helm-registry-pwd }}
+          force-update: ${{ inputs.helm-force-update }}
+          skip-tls: ${{ inputs.helm-skip-tls }}
+          push-type: ${{ inputs.helm-push-type }}
+          pkg-path: ${{ steps.helm-package.outputs.PKG_PATH }}
+      - name: Chart update
+        id: chart-update
+        if: (inputs.auto-update-chart == 'true') && (inputs.release)
+        uses: ixxeL-DevOps/gha-templates/.github/actions/chart-update@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          evaluate-update: ${{ inputs.evaluate-update }}
+          promotion-version: ${{ steps.bump-version.outputs.VERSION }}
+      - name: Helm docs
+        id: helm-docs
+        if: (inputs.auto-update-chart == 'true') && (inputs.release)
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-docs@main
+        with:
+          chart-search-root: ${{ inputs.workingdir }}
+      - name: Git config
+        id: git-config
+        if: (inputs.auto-update-chart == 'true') && (inputs.release)
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+      - name: Update changelog
+        id: changelog
+        if: (inputs.auto-update-chart == 'true') && (inputs.release)
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          release-name: ${{ steps.bump-version.outputs.VERSION }}
+      - name: Git push
+        id: git-push
+        if: (inputs.auto-update-chart == 'true') && (inputs.release)
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        with:
+          git-token: ${{ secrets.PAT }}
+          git-msg: ":package: CI release of helm chart ${{ env.COMPONENT_NAME }} version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
+          git-workdir: ${{ inputs.git-workdir }}
+          git-staging-dir: ${{ inputs.workingdir }}
+          push-option: ${{ inputs.push-option }}
+      - name: 🚀 GH Release
+        id: gh-release
+        if: (inputs.auto-tag-repo == 'true') && (inputs.auto-update-chart == 'true') && (inputs.release)
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        with:
+          tag: ${{ env.COMPONENT_NAME }}-${{ steps.bump-version.outputs.VERSION }}
+          verify-tag: ${{ inputs.release-verify-tag }}
+          target-branch: ${{ inputs.release-target-branch }}
+        env:
+          GH_TOKEN: ${{ github.token }}

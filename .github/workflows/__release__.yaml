@@ -1,0 +1,195 @@
+##################################################
+# DO NOT CALL DIRECTLY THIS WORKFLOW ON PROJECTS #
+##################################################
+#
+# Automatically release new version
+#
+
+---
+name: Release
+on:
+  workflow_call:
+    secrets:
+      git-token:
+        required: false
+    inputs:
+      # General
+      node-version:
+        required: false
+        type: string
+        default: "18"
+      increment-type:
+        required: false
+        type: string
+        default: "patch"
+      # Release-it
+      git-tag:
+        description: tag the branch
+        required: false
+        type: string
+        default: "true"
+      git-commit:
+        description: commit the branch
+        required: false
+        type: string
+        default: "false"
+      git-push:
+        description: push the branch
+        required: false
+        type: string
+        default: "true"
+      git-get-latest-tags-from-all-refs:
+        description: fetch tags from all branches
+        required: false
+        type: string
+        default: "false"
+      git-require-commits:
+        description: check for commits before releasing
+        required: false
+        type: string
+        default: "true"
+      github-release:
+        description: enable github release
+        required: false
+        type: string
+        default: "true"
+      github-autogenerate:
+        description: generate release automatically
+        required: false
+        type: string
+        default: "true"
+      github-pre-release:
+        description: generate pre-release automatically
+        required: false
+        type: string
+        default: "false"
+      github-draft:
+        description: use mode draft
+        required: false
+        type: string
+        default: "false"
+      npm-publish:
+        description: npm publish artefact
+        required: false
+        type: string
+        default: "false"
+      npm-ignore-version:
+        description: npm publish artefact
+        required: false
+        type: string
+        default: "true"
+      # git tag
+      push-option:
+        required: false
+        default: ci.skip
+        type: string
+      git-workdir:
+        required: false
+        default: .
+        type: string
+      # Vault
+      vault-enabled:
+        required: false
+        default: true
+        type: boolean
+      vault-url:
+        required: false
+        default: https://vault.pp.dktapp.cloud
+        type: string
+      vault-namespace:
+        required: false
+        default: inix
+        type: string
+      vault-role:
+        required: false
+        default: whbox-ga-role
+        type: string
+      vault-secret-path:
+        required: false
+        default: whbox-tools/data/gh-actions
+        type: string
+
+jobs:
+  promote-and-tag:
+    name: promote-and-tag
+    runs-on: [self-hosted, decathlon]
+    timeout-minutes: 15
+    permissions:
+      checks: write
+      contents: write
+      deployments: write
+      issues: write
+      id-token: write
+      pull-requests: write
+      statuses: write
+    steps:
+      - name: Get secrets
+        id: get-secrets
+        if: inputs.vault-enabled == true
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ inputs.vault-url }}
+          namespace: ${{ inputs.vault-namespace }}
+          method: jwt
+          role: ${{ inputs.vault-role }}
+          secrets: |
+            ${{ inputs.vault-secret-path }} GHA_PERSONNAL_ADMIN_TOKEN | GHA_PERSONNAL_ADMIN_TOKEN
+      - name: Clone code with Vault
+        uses: actions/checkout@v4
+        if: inputs.vault-enabled == true
+        with:
+          fetch-depth: "0"
+          token: ${{ steps.get-secrets.outputs.GHA_PERSONNAL_ADMIN_TOKEN }}
+      - name: Clone code
+        uses: actions/checkout@v4
+        if: inputs.vault-enabled == false
+        with:
+          fetch-depth: "0"
+          token: ${{ secrets.git-token }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+      - name: Git config
+        id: git-config
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+      - name: Release version with Vault
+        id: release-it-vault
+        if: inputs.vault-enabled == true
+        uses: ixxeL-DevOps/gha-templates/.github/actions/release-it@main
+        with:
+          increment-type: ${{ inputs.increment-type }}
+          git-tag: ${{ inputs.git-tag }}
+          git-commit: ${{ inputs.git-commit }}
+          git-push: ${{ inputs.git-push }}
+          git-get-latest-tags-from-all-refs: ${{ inputs.git-get-latest-tags-from-all-refs }}
+          git-require-commits: ${{ inputs.git-require-commits }}
+          github-release: ${{ inputs.github-release }}
+          github-autogenerate: ${{ inputs.github-autogenerate }}
+          github-pre-release: ${{ inputs.github-pre-release }}
+          github-draft: ${{ inputs.github-draft }}
+          npm-publish: ${{ inputs.npm-publish }}
+          npm-ignore-version: ${{ inputs.npm-ignore-version }}
+        env:
+          GITHUB_TOKEN: ${{ steps.get-secrets.outputs.GHA_PERSONNAL_ADMIN_TOKEN }}
+      - name: Release version
+        id: release-it
+        if: inputs.vault-enabled == false
+        uses: ixxeL-DevOps/gha-templates/.github/actions/release-it@main
+        with:
+          increment-type: ${{ inputs.increment-type }}
+          git-tag: ${{ inputs.git-tag }}
+          git-commit: ${{ inputs.git-commit }}
+          git-push: ${{ inputs.git-push }}
+          git-get-latest-tags-from-all-refs: ${{ inputs.git-get-latest-tags-from-all-refs }}
+          git-require-commits: ${{ inputs.git-require-commits }}
+          github-release: ${{ inputs.github-release }}
+          github-autogenerate: ${{ inputs.github-autogenerate }}
+          github-pre-release: ${{ inputs.github-pre-release }}
+          github-draft: ${{ inputs.github-draft }}
+          npm-publish: ${{ inputs.npm-publish }}
+          npm-ignore-version: ${{ inputs.npm-ignore-version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.git-token }}

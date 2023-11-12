@@ -1,0 +1,36 @@
+---
+name: Github update PR title
+description: Updating PR title
+author: ixxeL
+inputs:
+  pattern:
+    required: false
+    default: ${{ github.event.pull_request.head.ref }}
+    description: pattern to update pr title
+
+runs:
+  using: composite
+  steps:
+    - id: gh-release
+      run: |
+        echo -e "${BLUE}[ STEP - RELEASE GH ] > Updating PR title on Github${BLANK}"
+        echo -e "${CYAN}[ INFO ] > gh version.${BLANK}"
+        gh --version
+
+        TRIGGER_PATH=$(git diff-tree --no-commit-id --name-only -r HEAD)
+        echo -e "${CYAN}[ INFO ] > Path that triggered the commit is ${YELLOW}${TRIGGER_PATH}.${BLANK}"
+        PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+        PR_TITLE=$(jq --raw-output .pull_request.title "$GITHUB_EVENT_PATH")
+        NEW_TITLE="${{ inputs.pattern }}"
+
+        echo -e "${YELLOW}[ EXECUTING ] > Updating PR ${PURPLE}${PR_NUMBER}${YELLOW} with title ${PURPLE}${PR_TITLE}${YELLOW} to new title ${PURPLE}${NEW_TITLE}${BLANK}"
+        gh pr edit ${PR_NUMBER} -t "${NEW_TITLE}"
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

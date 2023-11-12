@@ -1,0 +1,68 @@
+---
+name: Promote Helm chart
+on:
+  workflow_call:
+    inputs:
+      workingdir:
+        required: false
+        default: .
+        type: string
+      helm-pull-repo-url:
+        description: Name of the docker image
+        required: false
+        default: https://whbox-chartmuseum.pp.dktapp.cloud
+        type: string
+      helm-pull-repo-username:
+        description: Name of the docker image
+        required: false
+        default: root
+        type: string
+      helm-push-repo-url:
+        description: Name of the docker image
+        required: false
+        default: https://whbox-chartmuseum.dktapp.cloud
+        type: string
+      helm-push-repo-username:
+        description: Name of the docker image
+        required: false
+        default: dkt
+        type: string
+      helm-chart-name:
+        description: Name of the docker image
+        required: true
+        type: string
+      helm-chart-version:
+        description: Name of the docker image
+        required: false
+        type: string
+      helm-fetch-latest:
+        description: Name of the docker image
+        required: false
+        default: "true"
+        type: string
+    secrets:
+      GHA_PERSONNAL_ADMIN_TOKEN:
+        required: true
+jobs:
+  promote-helm-chart:
+    permissions:
+      checks: write
+      contents: write
+      pages: write
+      deployments: write
+      issues: write
+      id-token: write
+      pull-requests: write
+      statuses: write
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__promote-helm-chart__.yaml@main
+    with:
+      workingdir: ${{ inputs.workingdir }}
+      helm-pull-repo-url: ${{ inputs.helm-pull-repo-url }}
+      helm-pull-repo-username: ${{ inputs.helm-pull-repo-username }}
+      helm-push-repo-url: ${{ inputs.helm-push-repo-url }}
+      helm-push-repo-username: ${{ inputs.helm-push-repo-username }}
+      helm-chart-name: ${{ inputs.helm-chart-name }}
+      helm-chart-version: ${{ inputs.helm-chart-version }}
+      helm-fetch-latest: ${{ inputs.helm-fetch-latest }}
+    secrets:
+      git-token: ${{ secrets.GHA_PERSONNAL_ADMIN_TOKEN }}

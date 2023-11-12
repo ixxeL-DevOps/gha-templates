@@ -1,0 +1,310 @@
+---
+name: Helm chart build
+
+on:
+  workflow_dispatch:
+
+  workflow_call:
+    inputs:
+      # General
+      workingdir:
+        required: false
+        default: .
+        type: string
+      runs-on:
+        description: OS to run jobs on
+        required: false
+        default: ubuntu-latest
+        type: string
+      ci-image:
+        description: Docker image used for CI jobs
+        required: false
+        default: ixxel/ci-toolbox:latest
+        type: string
+      cd-image:
+        description: Docker image used for CD jobs
+        required: false
+        default: ixxel/cd-toolbox:latest
+        type: string
+      template-repo:
+        description: repository of the ci/cd template to use
+        required: false
+        default: ixxeL-DevOps/gha-templates/.github/actions
+        type: string
+      template-ref:
+        description: branch or tag of the ci/cd template to use
+        required: false
+        default: main
+        type: string
+      # helm unit tests
+      with-subchart:
+        description: include subchart
+        required: false
+        default: true
+        type: boolean
+      tests-dir:
+        description: tests directory relative to workingdir
+        required: false
+        default: tests/*.yaml
+        type: string
+      # Checkov
+      artefact:
+        required: true
+        type: string
+      compact:
+        required: false
+        default: true
+        type: boolean
+      quiet:
+        required: false
+        default: false
+        type: string
+      skip-download:
+        required: false
+        default: false
+        type: string
+      format:
+        required: false
+        default: cli
+        type: string
+      soft-fail:
+        required: false
+        default: true
+        type: string
+      gate:
+        required: false
+        default: "0"
+        type: string
+      skip-path:
+        required: false
+        type: string
+      skip-framework:
+        required: false
+        type: string
+      skip-check:
+        required: false
+        type: string
+      check:
+        required: false
+        type: string
+      framework:
+        required: false
+        type: string
+      # helm template
+      strict:
+        description: use strict mode
+        required: false
+        default: true
+        type: boolean
+      chart-name:
+        description: name of the chart
+        required: false
+        type: string
+      values-file:
+        description: name of the values.yaml file
+        required: false
+        default: values.yaml
+        type: string
+      add-repo:
+        description: weither or not to add a repo
+        required: false
+        default: false
+        type: boolean
+      repo-url:
+        description: url of the helm repo to add
+        required: false
+        type: string
+      repo-name:
+        description: name of the helm repo to add
+        required: false
+        default: temp-repo
+        type: string
+      repo-user:
+        description: user of the helm repo to add
+        required: false
+        type: string
+      repo-pwd:
+        description: password of the helm repo to add
+        required: false
+        type: string
+      set:
+        description: argument to pass to helm chart as --set command
+        required: false
+        type: string
+      stdout-mode:
+        description: output template to stdout
+        required: false
+        default: true
+        type: boolean
+      display-mode:
+        description: display template result to stdout
+        required: false
+        default: true
+        type: boolean
+      output-dir:
+        description: output directory name for template file
+        required: false
+        default: helm-tpl-result
+        type: string
+      output-file:
+        description: output file name for template file
+        required: false
+        default: result.yaml
+        type: string
+
+jobs:
+  # helm-build:
+  #   name: helm-build
+  #   timeout-minutes: 5
+  #   runs-on: ${{ inputs.runs-on }}
+  #   container:
+  #     image: ${{ inputs.ci-image }}
+  #   steps:
+  #   - name: Clone code
+  #     id: git-clone
+  #     uses: actions/checkout@v4
+  #   - name: Helm linting
+  #     id: helm-lint
+  #     uses: ixxeL-DevOps/gha-templates/.github/actions/helm-lint@main
+  #     with:
+  #       workingdir: ${{ inputs.workingdir }}
+  #   - name: Helm Datree scan
+  #     id: helm-datree
+  #     continue-on-error: true
+  #     uses: ixxeL-DevOps/gha-templates/.github/actions/helm-datree@main
+  #     with:
+  #       workingdir: ${{ inputs.workingdir }}
+  #   - name: Helm Checkov scan
+  #     id: helm-checkov
+  #     uses: ixxeL-DevOps/gha-templates/.github/actions/checkov@main
+  #     with:
+  #       workingdir: ${{ inputs.workingdir }}
+  #       artefact: ${{ inputs.artefact }}
+  #       compact: ${{ inputs.compact }}
+  #       quiet: ${{ inputs.quiet }}
+  #       skip-download: ${{ inputs.skip-download }}
+  #       format: ${{ inputs.format }}
+  #       soft-fail: ${{ inputs.soft-fail }}
+  #       gate: ${{ inputs.gate }}
+  #       skip-path: ${{ inputs.skip-path }}
+  #       skip-framework: ${{ inputs.skip-framework }}
+  #       skip-check: ${{ inputs.skip-check }}
+  #       check: ${{ inputs.check }}
+  #       framework: ${{ inputs.framework }}
+  #   - name: Helm Unit testing
+  #     id: helm-unittest
+  #     uses: ixxeL-DevOps/gha-templates/.github/actions/helm-unittest@main
+  #     with:
+  #       workingdir: ${{ inputs.workingdir }}
+  #       with-subchart: ${{ inputs.with-subchart }}
+  #       tests-dir: ${{ inputs.tests-dir }}
+  #   - name: Helm Templating
+  #     id: helm-template
+  #     uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@main
+  #     with:
+  #       workingdir: ${{ inputs.workingdir }}
+  #       strict: ${{ inputs.strict }}
+  #       chart-name: ${{ inputs.chart-name }}
+  #       values-file: ${{ inputs.values-file }}
+  #       add-repo: ${{ inputs.add-repo }}
+  #       repo-url: ${{ inputs.repo-url }}
+  #       repo-name: ${{ inputs.repo-name }}
+  #       repo-user: ${{ inputs.repo-user }}
+  #       repo-pwd: ${{ inputs.repo-pwd }}
+  #       set: ${{ inputs.set }}
+  #       stdout-mode: ${{ inputs.stdout-mode }}
+  #       display-mode: ${{ inputs.display-mode }}
+  #       output-dir: ${{ inputs.output-dir }}
+  #       output-file: ${{ inputs.output-file }}
+  #   - name: Helm Packaging
+  #     id: helm-package
+  #     uses: ixxeL-DevOps/gha-templates/.github/actions/helm-package@main
+  #     with:
+  #       workingdir: ${{ inputs.workingdir }}
+  #       chart-name: ${{ steps.helm-lint.outputs.CHART_NAME }}
+  #       chart-version: ${{ steps.helm-lint.outputs.CHART_VERSION }}
+  #       chart-appversion: ${{ steps.helm-lint.outputs.CHART_APP_VERSION }}
+  #       values-file: ${{ inputs.values-file }}
+  k3s-test:
+    name: k3s-test
+    timeout-minutes: 5
+    runs-on: ${{ inputs.runs-on }}
+    container:
+      # image: ${{ inputs.cd-image }}
+      image: rancher/k3d:5.3.0-dind
+    steps:
+      - name: prepare k3d
+        id: prepare-k3d
+        run: |
+          apk add curl
+          KUBECTL_VERSION=$(curl -L "https://storage.googleapis.com/kubernetes-release/release/stable.txt")
+          curl -sSLO "https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x ./kubectl
+          mv ./kubectl /usr/local/bin
+          # curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          # npm install -g github-files-fetcher
+          # fetcher --url="https://github.com/AbsaOSS/k3d-action/blob/main/run.sh" --out=./
+          # chmod +x ./run.sh
+      - name: execute k3d
+        id: execute-k3d
+        run: |
+          set +e
+          k3d cluster create --no-lb --k3s-arg '--kube-proxy-arg=conntrack-max-per-core=0@server:*' --k3s-arg '--kube-proxy-arg=conntrack-max-per-core=0@agent:*' --k3s-arg '--no-deploy=traefik'
+          sleep 1
+          k3d kubeconfig merge -s -o ./config
+          cat config
+          docker ps
+          docker logs k3d-k3s-default-server-0
+          kubectl cluster-info --kubeconfig ./config
+          kubectl get pods -A --kubeconfig ./config
+          # ./run.sh deploy
+        env:
+          CLUSTER_NAME: test-cluster-1
+          ARGS: "--servers=1 --no-lb --k3s-arg '--no-deploy=traefik'"
+          K3D_VERSION: v5.3.0
+    # - name: k3s create cluster
+    #   id: k3s-create-cluster
+    #   uses: AbsaOSS/k3d-action@v2
+    #   with:
+    #     k3d-version: v5.4.9
+    #     cluster-name: test-cluster-1
+    #     args: >-
+    #       --agents 1
+    #       --k3s-arg "--no-deploy=traefik"
+    # - name: kubectl-test
+    #   id: kubectl-test
+    #   run: |
+    #     kubectl get pods -A
+
+    # - name: Helm Full Build
+    #   id: helm-full-build
+    #   uses: ixxeL-DevOps/gha-templates/.github/composition/helm-build@main
+    #   with:
+    #     workingdir: ${{ inputs.workingdir }}
+    #     artefact: ${{ inputs.artefact }}
+    #     compact: ${{ inputs.compact }}
+    #     quiet: ${{ inputs.quiet }}
+    #     skip-download: ${{ inputs.skip-download }}
+    #     format: ${{ inputs.format }}
+    #     soft-fail: ${{ inputs.soft-fail }}
+    #     gate: ${{ inputs.gate }}
+    #     skip-path: ${{ inputs.skip-path }}
+    #     skip-framework: ${{ inputs.skip-framework }}
+    #     skip-check: ${{ inputs.skip-check }}
+    #     check: ${{ inputs.check }}
+    #     framework: ${{ inputs.framework }}
+    #     with-subchart: ${{ inputs.with-subchart }}
+    #     tests-dir: ${{ inputs.tests-dir }}
+    #     strict: ${{ inputs.strict }}
+    #     chart-name: ${{ inputs.chart-name }}
+    #     values-file: ${{ inputs.values-file }}
+    #     add-repo: ${{ inputs.add-repo }}
+    #     repo-url: ${{ inputs.repo-url }}
+    #     repo-name: ${{ inputs.repo-name }}
+    #     repo-user: ${{ inputs.repo-user }}
+    #     repo-pwd: ${{ inputs.repo-pwd }}
+    #     set: ${{ inputs.set }}
+    #     stdout-mode: ${{ inputs.stdout-mode }}
+    #     display-mode: ${{ inputs.display-mode }}
+    #     output-dir: ${{ inputs.output-dir }}
+    #     output-file: ${{ inputs.output-file }}

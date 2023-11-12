@@ -1,0 +1,49 @@
+---
+name: Get img info
+description: Find docker image sha in GAR for a specific tag
+author: ixxeL
+inputs:
+  image-fullname:
+    required: true
+    description: full name of the docker image
+  image-tag:
+    required: true
+    description: tag of the docker image
+outputs:
+  IMG_DIGEST:
+    description: Digest of the image associated with searched tag
+    value: ${{ steps.get-img-info.outputs.IMG_DIGEST }}
+  IMG_SHA:
+    description: Commit SHA tag of the image associated with searched tag
+    value: ${{ steps.get-img-info.outputs.IMG_SHA }}
+
+runs:
+  using: composite
+  steps:
+    - id: get-img-info
+      run: |
+        echo -e "${BLUE}[ STEP - FIND IMG SHA ] > Finding SHA associated to tag in GAR${BLANK}"
+        echo -e "${CYAN}[ INFO ] > gcloud version.${BLANK}"
+        gcloud --version
+
+        echo -e "${YELLOW}[ EXECUTING ] > Getting information for image ${PURPLE}${{ inputs.image-fullname }}:${{ inputs.image-tag }}${BLANK}"
+        IMG_DIGEST=$(gcloud container images describe ${{ inputs.image-fullname }}:${{ inputs.image-tag }} --format=json | jq -r '.image_summary.digest')
+        echo -e "${CYAN}[ INFO ] > Digest for image tag ${{ inputs.image-tag }} is ${PURPLE}${IMG_DIGEST}${BLANK}"
+
+        echo -e "${CYAN}[ INFO ] > Listing tags for image tag ${{ inputs.image-tag }}${BLANK}"
+        gcloud container images list-tags ${{ inputs.image-fullname }} --filter="tags=${{ inputs.image-tag }}" --format=json | jq -C '.[].tags[]'
+
+        IMG_SHA=$(gcloud container images list-tags ${{ inputs.image-fullname }} --filter="tags=${{ inputs.image-tag }}" --format=json | jq -r '.[].tags[] | select(startswith("sha"))' | sed 's/sha-//')
+        echo -e "${CYAN}[ INFO ] > commit SHA of image ${PURPLE}${{ inputs.image-fullname }}:${{ inputs.image-tag }}${CYAN} is ${PURPLE}${IMG_SHA}${BLANK}"
+
+        echo "IMG_SHA=$IMG_SHA" >> $GITHUB_OUTPUT
+        echo "IMG_DIGEST=$IMG_DIGEST" >> $GITHUB_OUTPUT
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

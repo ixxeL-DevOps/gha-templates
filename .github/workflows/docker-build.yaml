@@ -1,0 +1,102 @@
+---
+name: Docker image building
+on:
+  workflow_call:
+    secrets:
+      git-token:
+        required: false
+      GH_API_TOKEN:
+        required: false
+      DOCKER_IO_PWD:
+        required: false
+    inputs:
+      workingdir:
+        required: false
+        default: .
+        type: string
+      build-image:
+        required: false
+        default: ixxel/toolbox:builder-latest
+        type: string
+      component:
+        required: false
+        type: string
+      img-name:
+        required: false
+        type: string
+      artefact:
+        required: false
+        default: Dockerfile
+        type: string
+      github-api-auth:
+        required: false
+        default: true
+        type: boolean
+      fail-on:
+        required: false
+        default: critical
+        type: string
+      cache-registry:
+        required: false
+        default: docker.io/ixxel
+        type: string
+      podman-registry:
+        required: false
+        default: docker.io
+        type: string
+      podman-username:
+        required: false
+        type: string
+      docker-hub-login:
+        required: false
+        default: true
+        type: boolean
+jobs:
+  docker-test-build:
+    concurrency:
+      group: "${{ github.workflow }}-${{ github.head_ref }}"
+      cancel-in-progress: true
+    if: (!contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref))
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder__.yaml@main
+    with:
+      build-image: ${{ inputs.build-image }}
+      component: ${{ inputs.component }}
+      workingdir: ${{ inputs.workingdir }}
+      img-name: ${{ inputs.img-name }}
+      artefact: ${{ inputs.artefact }}
+      github-api-auth: ${{ inputs.github-api-auth }}
+      fail-on: ${{ inputs.fail-on }}
+      cache-registry: ${{ inputs.cache-registry }}
+      podman-registry: ${{ inputs.podman-registry }}
+      podman-username: ${{ inputs.podman-username }}
+      docker-hub-login: ${{ inputs.docker-hub-login }}
+      release: false
+    secrets:
+      git-token: ${{ secrets.git-token }}
+      github-api-rest-token: ${{ secrets.GH_API_TOKEN }}
+      docker-io-pwd: ${{ secrets.DOCKER_IO_PWD }}
+      registry-password: ${{ secrets.DOCKER_IO_PWD }}
+  docker-full-build:
+    concurrency:
+      group: "${{ github.ref }}"
+      cancel-in-progress: true
+    if: contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref)
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder__.yaml@main
+    with:
+      build-image: ${{ inputs.build-image }}
+      component: ${{ inputs.component }}
+      workingdir: ${{ inputs.workingdir }}
+      img-name: ${{ inputs.img-name }}
+      artefact: ${{ inputs.artefact }}
+      github-api-auth: ${{ inputs.github-api-auth }}
+      fail-on: ${{ inputs.fail-on }}
+      cache-registry: ${{ inputs.cache-registry }}
+      podman-registry: ${{ inputs.podman-registry }}
+      podman-username: ${{ inputs.podman-username }}
+      docker-hub-login: ${{ inputs.docker-hub-login }}
+      release: true
+    secrets:
+      git-token: ${{ secrets.git-token }}
+      github-api-rest-token: ${{ secrets.GH_API_TOKEN }}
+      docker-io-pwd: ${{ secrets.DOCKER_IO_PWD }}
+      registry-password: ${{ secrets.DOCKER_IO_PWD }}

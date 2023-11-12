@@ -1,0 +1,126 @@
+---
+name: CI gradle
+on:
+  workflow_call:
+    secrets:
+      SONAR_TOKEN:
+        required: false
+      GHA_PERSONNAL_ADMIN_TOKEN:
+        required: false
+      SNYK_TOKEN:
+        required: false
+      PRISMA_USER:
+        required: false
+      PRISMA_PASS:
+        required: false
+    inputs:
+      workingdir:
+        required: false
+        type: string
+        default: .
+      enable-acceptance-tests:
+        required: false
+        type: string
+        default: "true"
+        description: enables acceptance tests job
+      enable-integration-tests:
+        required: false
+        type: string
+        default: "true"
+        description: enables integration tests job
+      enable-unit-tests:
+        required: false
+        type: string
+        default: "true"
+        description: enables unit tests job
+      environment:
+        required: false
+        type: string
+        default: development
+      quick-fail:
+        required: false
+        type: string
+        default: "false"
+      git-enable-tag:
+        required: false
+        default: "true"
+        type: string
+      gh-release:
+        required: false
+        default: "false"
+        type: string
+      workload_identity_provider:
+        required: false
+        type: string
+        default: "test"
+      service_account:
+        required: false
+        type: string
+        default: "test"
+      image-name:
+        required: false
+        type: string
+      docker-buildargs:
+        required: false
+        type: string
+      docker-sbom:
+        required: false
+        default: true
+        type: boolean
+      docker-provenance:
+        required: false
+        default: true
+        type: boolean
+      gcs-bucket-name:
+        required: false
+        type: string
+      gcs-reports-path:
+        required: false
+        type: string
+      docker-registry:
+        required: false
+        type: string
+      gcp-base-url:
+        required: false
+        type: string
+        default: test
+      gcp-project-id:
+        required: false
+        type: string
+        default: test
+      gcp-gar-id:
+        required: false
+        type: string
+        default: test
+jobs:
+  ci-gradle:
+    concurrency:
+      group: "${{ github.workflow }}-${{ github.ref }}"
+      cancel-in-progress: true
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__ci-gradle__.yaml@main
+    with:
+      workingdir: ${{ inputs.workingdir }}
+      workload_identity_provider: ${{ inputs.workload_identity_provider }}
+      service_account: ${{ inputs.service_account }}
+      enable-acceptance-tests: ${{ inputs.enable-acceptance-tests }}
+      enable-integration-tests: ${{ inputs.enable-integration-tests }}
+      enable-unit-tests: ${{ inputs.enable-unit-tests }}
+      environment: ${{ inputs.environment }}
+      image-name: ${{ inputs.image-name }}
+      gcs-bucket-name: ${{ inputs.gcs-bucket-name }}
+      gcs-reports-path: ${{ inputs.gcs-reports-path }}
+      gcp-base-url: ${{ inputs.gcp-base-url }}
+      docker-target-registry: ${{ inputs.gcp-base-url }}/${{ inputs.gcp-project-id }}/${{ inputs.gcp-gar-id }}
+      docker-buildargs: ${{ inputs.docker-buildargs }}
+      docker-sbom: ${{ inputs.docker-sbom }}
+      docker-provenance: ${{ inputs.docker-provenance }}
+      quick-fail: ${{ inputs.quick-fail }}
+      git-enable-tag: ${{ inputs.git-enable-tag }}
+      gh-release: ${{ inputs.gh-release }}
+    secrets:
+      git-admin-token: ${{ secrets.GHA_PERSONNAL_ADMIN_TOKEN }}
+      git-token: ${{ github.token }}
+      sonar-token: ${{ secrets.SONAR_TOKEN }}
+      snyk-token: ${{ secrets.SNYK_TOKEN }}
+      prisma-user: ${{ secrets.PRISMA_USER }}
+      prisma-pass: ${{ secrets.PRISMA_PASS }}

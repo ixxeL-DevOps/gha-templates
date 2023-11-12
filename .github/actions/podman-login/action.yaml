@@ -1,0 +1,92 @@
+---
+name: podman login
+description: login to registry with podman
+author: ixxeL
+inputs:
+  podman-docker:
+    description: Using podman-docker
+    required: false
+    default: "false"
+  docker-config:
+    description: Using docker config location
+    required: false
+    default: "true"
+  registry:
+    description: URL registry
+    required: true
+  username:
+    description: User for registry
+    required: true
+  password:
+    description: Pwd for registry
+    required: true
+  tls-verify:
+    description: TLS verify for login
+    required: false
+    default: "true"
+  verbose:
+    description: Verbose output
+    required: false
+    default: "true"
+  docker-hub-login:
+    description: Is the login docker.io
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - id: podman-login
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - LOGIN TO REGISTRY ] > Login to registry ${{ inputs.registry }} with podman${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Podman version${BLANK}"
+        podman version
+
+        if [[ "${{ inputs.podman-docker }}" = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Using docker cli emulated podman${BLANK}"
+          BINARY=docker
+        else
+          echo -e "${CYAN}[ INFO ] > Using podman cli${BLANK}"
+          BINARY=podman
+        fi
+
+        if [[ "${{ inputs.docker-config }}" = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Using docker config location${BLANK}"
+          export DOCKER_CONFIG=/root/.docker
+          export CONFIG_FILE="/root/.docker/config.json"
+        else
+          echo -e "${CYAN}[ INFO ] > Using podman config location${BLANK}"
+          export CONFIG_FILE="/run/containers/0/auth.json"
+        fi
+
+        echo -e "${CYAN}[ INFO ] > Login to ${{ inputs.registry }} as user ${{ inputs.username }}${BLANK}"
+        ${BINARY} login ${{ inputs.registry }} -u ${{ inputs.username }} -p ${{ inputs.password }} --tls-verify=${{ inputs.tls-verify }} --verbose=${{ inputs.verbose }}
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ SUCCESS ] > Login to registry ${{ inputs.registry }} success ! ${BLANK}"
+        else
+          echo -e "${RED}[ FAIL ] > Login to registry ${{ inputs.registry }} failed ! ${BLANK}"
+          exit 1
+        fi
+
+        if [[ "${{ inputs.docker-hub-login }}" = true ]]
+        then
+          cat ${CONFIG_FILE} | jq '(.auths |= (. + {"https://index.docker.io/v1/":."docker.io"}|del(."docker.io")))' | sponge ${CONFIG_FILE}
+        fi
+
+        if [[ -f "${CONFIG_FILE}" ]]
+        then
+          cat "${CONFIG_FILE}" | jq -C
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

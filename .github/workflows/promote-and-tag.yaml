@@ -1,0 +1,47 @@
+---
+name: Promote and tag
+on:
+  workflow_call:
+    inputs:
+      # GAR
+      image-name:
+        description: Name of the docker image
+        required: true
+        type: string
+      original-tag:
+        description: "Image original tag (ex: master-*)"
+        required: true
+        type: string
+      target-env:
+        description: name of the target environment for deployment/retag
+        required: false
+        default: test
+        type: string
+    secrets:
+      DKTUNITED_TOKEN:
+        required: true
+      GHA_PERSONNAL_ADMIN_TOKEN:
+        required: true
+jobs:
+  promote-and-release:
+    permissions:
+      checks: write
+      contents: write
+      deployments: write
+      issues: write
+      id-token: write
+      pull-requests: write
+      statuses: write
+    if: contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref)
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__promote-and-tag__.yaml@main
+    with:
+      workload_identity_provider: "projects/208726332934/locations/global/workloadIdentityPools/ci-tools/providers/github"
+      service_account: "github-writer@warehousebox-ntqf.iam.gserviceaccount.com"
+      gcp-registry: europe-west4-docker.pkg.dev
+      gcp-repository: warehousebox-ntqf/whbox-docker-images
+      image-name: ${{ inputs.image-name }}
+      original-tag: ${{ inputs.original-tag }}
+      target-env: ${{ inputs.target-env }}
+    secrets:
+      git-admin-token: ${{ secrets.GHA_PERSONNAL_ADMIN_TOKEN }}
+      git-token: ${{ github.token }}

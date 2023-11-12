@@ -1,0 +1,86 @@
+---
+name: Changelog generate
+description: Generating CHANGELOG.md
+author: ixxeL
+inputs:
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  release-name:
+    description: Name of the release
+    required: false
+    default: New release
+
+runs:
+  using: composite
+  steps:
+    - id: generate-changelog
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - GENERATE CHANGELOG] > Generating CHANGELOG.md file${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Git version.${BLANK}"
+        git version
+
+        LAST_TAG=$(git describe --abbrev=0 --tags)
+        echo -e "${CYAN}[ INFO ] > Last tag is ${YELLOW}${LAST_TAG}${BLANK}"
+
+        commit_messages=$(git log --no-merges --pretty=format:"%s" --oneline --grep="^\(feat\|fix\|chore\|docs\|style\|refactor\|test\|perf\|build\|ci\|revert\)" ${LAST_TAG}..HEAD)
+        echo "$commit_messages"
+
+        if [[ -f ${{ inputs.workingdir }}/CHANGELOG.md ]]
+        then
+          DATE=$(date +'%Y-%m-%d')
+          echo -e "${CYAN}[ INFO ] > Updating current CHANGELOG.md${BLANK}"
+          echo >> ${{ inputs.workingdir }}/CHANGELOG.md
+          echo "## Release ${{ inputs.release-name }} - $DATE" >> ${{ inputs.workingdir }}/CHANGELOG.md
+        else
+          echo -e "${CYAN}[ INFO ] > Initializing new CHANGELOG.md${BLANK}"
+          echo "# CHANGELOG" > ${{ inputs.workingdir }}/CHANGELOG.md
+          echo >> ${{ inputs.workingdir }}/CHANGELOG.md
+        fi
+
+        declare -A commit_categories
+        declare -a categories
+
+        while IFS= read -r line; do
+          commit_type=$(echo "$line" | awk -F' ' '{print $2}' | grep -Eo "(feat|fix|chore|docs|style|refactor|test|perf|build|ci|revert)")
+          full_commit_msg=$(echo "$line" |awk '{$1=""; print $0}')
+          commit_sha=$(echo "$line" | awk -F' ' '{print $1}')
+
+          if [[ -n $commit_type ]]; then
+            if [[ -z ${commit_categories[$commit_type]} ]]; then
+              echo "CREATING COMMIT CATEGORY $commit_type --> \`$commit_sha\`:$full_commit_msg"
+              commit_categories[$commit_type]="- \`$commit_sha\`:$full_commit_msg"
+              categories+=("$commit_type")
+            else
+              echo "APPEND COMMIT TO CATEGORY $commit_type --> \`$commit_sha\`:$full_commit_msg"
+              commit_categories[$commit_type]+=$'\n'"- \`$commit_sha\`:$full_commit_msg"
+            fi
+          fi
+        done <<< "$commit_messages"
+
+        for category in "${categories[@]}"
+        do
+          echo "#### ${category^}" >> ${{ inputs.workingdir }}/CHANGELOG.md
+          echo "${commit_categories[$category]}" >> ${{ inputs.workingdir }}/CHANGELOG.md
+          echo "" >> ${{ inputs.workingdir }}/CHANGELOG.md
+        done
+
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ SUCCESS ] > Changelog generated with success${BLANK}"
+          exit 0
+        else
+          echo -e "${RED}[ FAIL ] > Changelog generation failed!${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

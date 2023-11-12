@@ -1,0 +1,152 @@
+---
+name: Helm template
+description: Template Helm chart with helm CLI
+author: ixxeL
+inputs:
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  strict:
+    description: use strict mode
+    required: false
+    default: "true"
+  chart-name:
+    description: name of the chart
+    required: false
+  values-file:
+    description: name of the values.yaml file
+    required: false
+    default: values.yaml
+  add-repo:
+    description: weither or not to add a repo
+    required: false
+    default: "false"
+  repo-url:
+    description: url of the helm repo to add
+    required: false
+  repo-name:
+    description: name of the helm repo to add
+    required: false
+    default: temp-repo
+  repo-user:
+    description: user of the helm repo to add
+    required: false
+  repo-pwd:
+    description: password of the helm repo to add
+    required: false
+  set:
+    description: argument to pass to helm chart as --set command
+    required: false
+  stdout-mode:
+    description: output template to stdout
+    required: false
+    default: "true"
+  display-mode:
+    description: display template result to stdout
+    required: false
+    default: "true"
+  output-dir:
+    description: output directory name for template file
+    required: false
+    default: helm-tpl-result
+  output-file:
+    description: output file name for template file
+    required: false
+    default: result.yaml
+outputs:
+  TPL_CHART_YAML:
+    description: template file path
+    value: ${{ steps.helm-template.outputs.TPL_CHART_YAML }}
+
+runs:
+  using: composite
+  steps:
+    - id: helm-template
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - Helm-chart templating ] > Templating Helm chart.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Helm version.${BLANK}"
+        helm version --short
+
+        if [[ ${{ inputs.add-repo }} = true ]]
+        then
+          echo -e "${YELLOW}[ EXECUTING ] > Adding repo named ${{ inputs.repo-name }} from ${{ inputs.repo-url }}.${BLANK}"
+          helm repo add ${{ inputs.repo-name }} ${{ inputs.repo-url }} --force-update \
+                                                          --pass-credentials \
+                                                          --username=${{ inputs.repo-user }} \
+                                                          --password=${{ inputs.repo-pwd }} \
+                                                          --insecure-skip-tls-verify
+          if [[ $? = 0 ]]
+          then
+            echo -e "${GREEN}[ SUCCESS ] > Helm repo added successfully !${BLANK}"
+            WORKINGDIR=${{ inputs.repo-name }}/${{ inputs.chart-name }}
+            CHART_NAME=${{ inputs.chart-name }}
+          else
+            echo -e "${RED}[ ERROR ] > Helm repo failed to be added.${BLANK}"
+            exit 1
+          fi
+        elif [[ ${{ inputs.add-repo }} = false ]]
+        then
+          if [[ -f ${{ inputs.workingdir }}/Chart.yaml ]]
+          then
+            echo -e "${CYAN}[ INFO ] > Chart.yaml file detected.${BLANK}"
+            yq e ${{ inputs.workingdir }}/Chart.yaml -C
+            CHART_NAME=$(yq e '.name' ${{ inputs.workingdir }}/Chart.yaml)
+            CHART_VERSION=$(yq e '.version' ${{ inputs.workingdir }}/Chart.yaml)
+            CHART_APP_VERSION=$(yq e '.appVersion' ${{ inputs.workingdir }}/Chart.yaml)
+            echo -e "${CYAN}[ INFO ] > The chart [[ ${YELLOW}${CHART_NAME}${CYAN} ]] has version --> [[ ${YELLOW}${CHART_VERSION}${CYAN} ]] and appVersion --> [[ ${YELLOW}${CHART_APP_VERSION}${CYAN} ]]${BLANK}"
+            WORKINGDIR=${{ inputs.workingdir }}
+          else
+            echo -e "${PURPLE}[ WARNING ] > Chart.yaml file NOT detected.${BLANK}"
+            exit 1
+          fi
+        fi
+
+        if [ "${{ inputs.set }}" ]
+        then
+          SET=${{ inputs.set }}
+          [[ ! "$SET" =~ ^\|.+ ]] || SET="${SET:1}"
+          full_str=${SET//|/ --set }
+          SETTINGS="$SETTINGS --set $full_str"
+          echo -e "${CYAN}[ INFO ] > Set values for helm template are the following${BLANK}"
+          echo $SETTINGS
+        fi
+
+        echo -e "${YELLOW}[ EXECUTING ] > Executing helm chart ${CHART_NAME} templating.${BLANK}"
+        VALUES_FILE=${WORKINGDIR}/${{ inputs.values-file }}
+        if [[ ! -d ${{ inputs.output-dir }} ]]; then mkdir -p ${{ inputs.output-dir }}; fi
+        if [[ ${{ inputs.stdout-mode }} = true ]]
+        then
+          helm template ${CHART_NAME} ${WORKINGDIR} --values="${VALUES_FILE}" ${SETTINGS} > ${{ inputs.output-dir }}/${{ inputs.output-file }}
+        elif [[ ${{ inputs.stdout-mode }} = "false" ]]
+        then
+          helm template ${CHART_NAME} ${WORKINGDIR} --values="${VALUES_FILE}" ${SETTINGS} --output-dir ${{ inputs.output-dir }}
+        fi
+
+        if [[ $? = 0 ]]
+        then
+          if [[ ${{ inputs.stdout-mode }} = true ]]
+          then
+            TPL_CHART_YAML=${{ inputs.output-dir }}/${{ inputs.output-file }}
+            echo "TPL_CHART_YAML=$TPL_CHART_YAML" >> $GITHUB_OUTPUT
+            if [[ "${{ inputs.display-mode }}" = true ]]
+            then
+              echo -e "${CYAN}[ INFO ] > Displaying templated result.${BLANK}"
+              yq e -C ${{ inputs.output-dir }}/${{ inputs.output-file }}
+            fi
+          fi
+          echo -e "${GREEN}[ CHECK SUCCESS ] > Helm templating succeeded without any error.${BLANK}"
+        else
+          echo -e "${RED}[ CHECK ERROR ] > Helm templating didn't succeed !${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

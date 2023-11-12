@@ -1,0 +1,63 @@
+---
+name: Shellcheck GHA
+description: Shellcheck for GH actions
+author: ixxeL
+inputs:
+  path:
+    description: path to look for
+    required: false
+    default: ".github/"
+  exclude:
+    description: path to exclude
+    required: false
+    default: ".github/workflows/*"
+  severity:
+    description: Is the login docker.io
+    required: false
+    default: "warning"
+
+runs:
+  using: composite
+  steps:
+    - id: shellcheck-gha
+      run: |
+        set +e
+        temp_file=$(mktemp)
+        find ${{ inputs.path }} -type f \( -name "*.yaml" -o -name "*.yml" \) ! -path "${{ inputs.exclude }}" | while read -r file
+        do
+          echo -e "${CYAN}[ INFO ] > GH action file analyzed : ${YELLOW}$file${BLANK}"
+          run_section=$(yq eval '.runs.steps[].run' "$file")
+
+          run_section=$(echo "$run_section" | awk '{gsub(/\$\{\{ /, "${"); gsub(/ \}\}/, "}"); gsub(/\}\}/, "}")}1')
+
+          content_with_shebang="#!/bin/bash"$'\n'"$run_section"
+
+          echo "$content_with_shebang" | shellcheck --severity=${{ inputs.severity }} --exclude=SC2154 -
+          if [[ $? = 0 ]]
+          then
+            echo -e "${GREEN}[ SUCCESS ] > GH action ${YELLOW}$file${GREEN} is fine${BLANK}"
+          else
+            echo -e "${PURPLE}[ FAIL ] > GH action ${YELLOW}$file${PURPLE} require improvement${BLANK}"
+            echo "FAIL=true" >> "$temp_file"
+          fi
+        done
+
+        if grep -q "FAIL=true" "$temp_file"
+        then
+          echo -e "${RED}[ FAIL ] > At least one of your GH action require improvement${BLANK}"
+          rm "$temp_file"
+          exit 1
+        else
+          echo -e "${GREEN}[ SUCCESS ] > All GH actions are good${BLANK}"
+          rm "$temp_file"
+          exit 0
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

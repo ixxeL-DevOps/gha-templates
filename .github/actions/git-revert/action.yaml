@@ -1,0 +1,79 @@
+---
+name: Git revert
+description: Reverting a commit
+author: ixxeL
+inputs:
+  git-workdir:
+    required: false
+    default: .
+    description: working directory for git
+  git-msg:
+    required: false
+    description: msg to revert
+  repo-branch:
+    required: false
+    default: main
+    description: default git branch
+  commit-sha-revert:
+    required: false
+    description: commit sha to revert to
+  auto-fetch-sha:
+    required: false
+    default: "false"
+    description: automatically fetch sha
+  push-option:
+    required: false
+    default: "ci skip"
+    description: push option for the commit
+
+runs:
+  using: composite
+  steps:
+    - id: git-revert
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - GIT REVERT ] > Reverting git commit${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Git version.${BLANK}"
+        git version
+
+        if [[ -n ${{ inputs.repo-branch }} ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Using provided ref name ${{ inputs.repo-branch }}${BLANK}"
+          GIT_REPO_BRANCH=${{ inputs.repo-branch }}
+        else
+          echo -e "${CYAN}[ INFO ] > Using current ref name ${GITHUB_REF_NAME}${BLANK}"
+          GIT_REPO_BRANCH=${GITHUB_REF_NAME}
+        fi
+
+        echo -e "${YELLOW}[ EXECUTING ] > Showing repo information.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > git branch.${BLANK}"
+        git -C ${{ inputs.git-workdir }} branch
+        echo -e "${CYAN}[ INFO ] > git origin.${BLANK}"
+        git -C ${{ inputs.git-workdir }} remote show origin
+
+        if [[ "${{ inputs.auto-fetch-sha }}" = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Auto fetching commit on branch ${GIT_REPO_BRANCH} with git rev-parse${BLANK}"
+          COMMIT_TO_REVERT=$(git -C ${{ inputs.git-workdir }} rev-parse ${GIT_REPO_BRANCH})
+          echo -e "${CYAN}[ INFO ] > Commit to revert is current ${PURPLE}${COMMIT_TO_REVERT}${BLANK}"
+        else
+          COMMIT_TO_REVERT=${{ inputs.commit-sha-revert }}
+          echo -e "${CYAN}[ INFO ] > Commit to revert ${PURPLE}${COMMIT_TO_REVERT}${BLANK}"
+        fi
+
+        echo -e "${YELLOW}[ EXECUTING ] > Revert commit ${PURPLE}${COMMIT_TO_REVERT}${YELLOW} and pushing to destination ${PUSH_URL} on branch ${REPO_BRANCH}${BLANK}"
+        git -C ${{ inputs.git-workdir }} revert ${COMMIT_TO_REVERT} --no-edit
+        if [[ -n "${{ inputs.git-msg }}" ]]
+        then
+          git -C ${{ inputs.git-workdir }} commit --amend -m "${{ inputs.git-msg }}"
+        fi
+        git -C ${{ inputs.git-workdir }} push origin --push-option ${{ inputs.push-option }} HEAD:${GIT_REPO_BRANCH}
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

@@ -1,0 +1,104 @@
+---
+name: helm-kubeconform
+description: Checking Helm manifest compliance
+author: ixxeL
+inputs:
+  prepare:
+    description: Prepare the job when not running in adequate environment
+    required: false
+    default: "true"
+  plugin-version:
+    description: Plugin version to download
+    required: false
+    default: v0.6.3
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  values-file:
+    description: name of the values.yaml file
+    required: false
+    default: values.yaml
+  schema-location:
+    description: where to find CRD schemas
+    required: false
+    default: https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+
+runs:
+  using: composite
+  steps:
+    - id: prepare
+      if: ${{ inputs.prepare == 'true' }}
+      run: |
+        set +e
+        helm plugin list | grep "kubeconform"
+        if [[ $? = 0 ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Plugin unittest already installed${BLANK}"
+        else
+          echo -e "${YELLOW}[ EXECUTING ] > Installing dependencies${BLANK}"
+          helm plugin install https://github.com/jtyr/kubeconform-helm --version "${{ inputs.plugin-version }}"
+        fi
+        pip install pyaml
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m
+    - id: helm-kubeconform
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - Helm-chart Kubeconform ] > Kubeconform analyzis${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Helm version.${BLANK}"
+        helm version --short
+        echo -e "${CYAN}[ INFO ] > Displaying plugins list.${BLANK}"
+        helm plugin list
+
+        echo -e "${YELLOW}[ EXECUTING ] > Checking helm chart ${{ inputs.workingdir }}.${BLANK}"
+        if [[ -d ${{ inputs.workingdir }} ]]
+        then
+          echo -e "${GREEN}[ CHECK SUCCESS ] > Directory exists, proceeding unit tests.${BLANK}"
+        else
+          echo -e "${RED}[ CHECK ERROR ] > Directory doesn't exist, canceling unit tests.${BLANK}"
+          exit 1
+        fi
+        if [[ -f ${{ inputs.workingdir }}/Chart.yaml ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Chart.yaml file detected. Here is the file${BLANK}"
+          yq e ${{ inputs.workingdir }}/Chart.yaml -C
+          CHART_NAME=$(yq e '.name' ${{ inputs.workingdir }}/Chart.yaml)
+          CHART_VERSION=$(yq e '.version' ${{ inputs.workingdir }}/Chart.yaml)
+          CHART_APP_VERSION=$(yq e '.appVersion' ${{ inputs.workingdir }}/Chart.yaml)
+          echo -e "${CYAN}[ INFO ] > The chart [[ ${YELLOW}${CHART_NAME}${CYAN} ]] has version --> [[ ${YELLOW}${CHART_VERSION}${CYAN} ]] and appVersion --> [[ ${YELLOW}${CHART_APP_VERSION}${CYAN} ]]${BLANK}"
+        else
+          echo -e "${PURPLE}[ WARNING ] > Chart.yaml file NOT detected.${BLANK}"
+          exit 1
+        fi
+
+        echo -e "${YELLOW}[ EXECUTING ] > Helm kubeconfirm on chart ${CHART_NAME}.${BLANK}"
+        helm kubeconform ${{ inputs.workingdir }} -f ${{ inputs.workingdir }}/${{ inputs.values-file }} \
+                                                  --schema-location default \
+                                                  --schema-location ${{ inputs.schema-location }} \
+                                                  --summary \
+                                                  --verbose \
+                                                  --ignore-missing-schemas
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ CHECK SUCCESS ] > Helm kubeconform succeeded without any error.${BLANK}"
+        else
+          echo -e "${PURPLE}[ CHECK ERROR ] > Helm kubeconform didn't succeed, please review your helm chart${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

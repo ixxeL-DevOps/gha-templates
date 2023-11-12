@@ -1,0 +1,160 @@
+---
+name: Kaniko build
+description: Build docker images with Kaniko
+author: ixxeL
+inputs:
+  img-name:
+    description: name of the image
+    required: true
+  tag:
+    description: tagged name to apply to the built image
+    required: true
+  file:
+    description: pathname or URL of a Dockerfile
+    required: false
+    default: ./Dockerfile
+  build-arg:
+    description: argument=value to supply to the builder
+    required: false
+    default: ""
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  target-dir:
+    description: directory in which to build the archive
+    required: false
+    default: test
+  github-api-auth:
+    description: Authenticate to github API
+    required: false
+    default: "false"
+  github-api-rest-token:
+    description: Github API token
+    required: false
+  single-snapshot:
+    required: false
+    default: "false"
+    description: Use single snapshotmode
+  new-run:
+    required: false
+    default: "false"
+    description: Use new run
+  skip-unused-stages:
+    required: false
+    default: "true"
+    description: Skip unused stages
+  snapshot-mode:
+    required: false
+    default: full
+    description: Use snapshot mode
+  no-push:
+    required: false
+    default: "true"
+    description: do not push to registry
+  verbosity:
+    required: false
+    default: info
+    description: level of verbosity
+  compressed-caching:
+    required: false
+    default: "true"
+    description: compress caching layer
+
+runs:
+  using: composite
+  steps:
+    - id: kaniko-build
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - BUILDING IMAGE ] > Building docker image ${{ inputs.img-name }}:${{ inputs.tag }} with Kaniko.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Kaniko version.${BLANK}"
+        executor version
+
+        if [ "${{ inputs.build-arg }}" ]
+        then
+            [[ ! "$BUILD_ARG" =~ ^\|.+ ]] || BUILD_ARG="${BUILD_ARG:1}"
+            full_str=${BUILD_ARG//|/ --build-arg }
+            BUILD_ARGS="--build-arg $full_str"
+            echo -e "${CYAN}[ INFO ] > Build args are the following${BLANK}"
+            echo "${BUILD_ARGS}"
+        fi
+        mkdir -p ${{ inputs.target-dir }}
+
+        if [[ ${{ inputs.github-api-auth }} = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Authenticating to Github API${BLANK}"
+          curl -sSfL -H "Authorization: token ${{ inputs.github-api-rest-token }}" https://api.github.com
+        fi
+
+        OPTIONS=""
+        if [[ ${{ inputs.single-snapshot }} = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Using single snapshot.${BLANK}"
+          OPTIONS+=" --single-snapshot"
+        fi
+        if [[ ${{ inputs.new-run }}  = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Using the experimental run implementation for detecting changes without requiring file system snapshots (--use-new-run option).${BLANK}"
+          OPTIONS+=" --use-new-run"
+        fi
+        if [[ ${{ inputs.skip-unused-stages }}  = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Build only used stages (--skip-unused-stages option).${BLANK}"
+          OPTIONS+=" --skip-unused-stages"
+        fi
+
+        echo -e "${CYAN}[ INFO ] > Snapshot mode ==> ${{ inputs.snapshot-mode }} ${BLANK}"
+        echo -e "${CYAN}[ INFO ] > NoPush mode ==> ${{ inputs.no-push }} ${BLANK}"
+
+        if [[ ${{ inputs.no-push }} = true ]]
+        then
+          echo -e "${YELLOW}[ EXECUTING ] > Executing build of ${{ inputs.img-name }}:${{ inputs.tag }}.${BLANK}"
+          executor --context ${{ inputs.workingdir }} \
+                    --dockerfile ${{ inputs.file }} \
+                    --tarPath=${{ inputs.target-dir }}/${{ inputs.img-name }}.tar \
+                    --destination=${{ inputs.img-name }}:${{ inputs.tag }} \
+                    --skip-tls-verify-pull \
+                    --skip-tls-verify \
+                    --no-push \
+                    --snapshot-mode=${{ inputs.snapshot-mode }} \
+                    --verbosity=${{ inputs.verbosity }} \
+                    --compressed-caching=${{ inputs.compressed-caching }} \
+                    ${BUILD_ARGS} \
+                    ${OPTIONS}
+        else
+          echo -e "${YELLOW}[ EXECUTING ] > Executing build of ${{ inputs.img-name }}:${{ inputs.tag }}.${BLANK}"
+          executor --context ${{ inputs.workingdir }} \
+                    --dockerfile ${{ inputs.file }} \
+                    --destination=${{ inputs.img-name }}:${{ inputs.tag }} \
+                    --skip-tls-verify-pull \
+                    --skip-tls-verify \
+                    --snapshot-mode=${{ inputs.snapshot-mode }} \
+                    --verbosity=${{ inputs.verbosity }} \
+                    --compressed-caching=${{ inputs.compressed-caching }} \
+                    ${BUILD_ARGS} \
+                    ${OPTIONS}
+        fi
+
+        if [[ $? = 0 ]]
+        then
+          if [[ ${{ inputs.no-push }} = true ]]
+          then
+            size=$(du -sh ${{ inputs.target-dir }}/${{ inputs.img-name }}.tar | awk '{print $1}')
+            echo -e "${GREEN}[ SUCCESS ] > Docker image ${YELLOW}${{ inputs.img-name }}:${{ inputs.tag }}${GREEN} successfully built with Kaniko. SIZE --> [ ${PURPLE}${size}${GREEN} ]${BLANK}"
+          else
+            echo -e "${GREEN}[ SUCCESS ] > Docker image ${YELLOW}${{ inputs.img-name }}:${{ inputs.tag }}${GREEN} successfully pushed with Kaniko to ${DST_REGISTRY}/${{ inputs.img-name }}:${{ inputs.tag }}${BLANK}"
+          fi
+        else
+          echo -e "${RED}[ FAIL ] > Docker image ${{ inputs.img-name }}:${{ inputs.tag }} failed to build with Kaniko !${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

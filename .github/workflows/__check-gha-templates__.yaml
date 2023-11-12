@@ -1,0 +1,43 @@
+---
+name: Check GH Actions templates
+on:
+  workflow_call:
+    inputs:
+      extra_args:
+        description: options to pass to pre-commit run
+        required: false
+        default: "--all-files"
+        type: string
+      shellcheck-severity:
+        description: Severity for shellcheck scan
+        required: false
+        default: warning
+        type: string
+      shellcheck-path:
+        description: Path for shellcheck to analyze
+        required: false
+        default: .github/
+        type: string
+      shellcheck-exclude:
+        description: Path to exclude for shellcheck
+        required: false
+        default: .github/workflows/*
+        type: string
+jobs:
+  check-gha-templates:
+    name: Check GHA templates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+      - name: Pre-commit
+        id: pre-commit
+        uses: ixxeL-DevOps/gha-templates/.github/actions/pre-commit@main
+      - name: Shellcheck GHA
+        id: shellcheck-gha
+        uses: ixxeL-DevOps/gha-templates/.github/actions/shellcheck-gha@main
+        with:
+          path: ${{ inputs.shellcheck-path }}
+          exclude: ${{ inputs.shellcheck-exclude }}
+          severity: ${{ inputs.shellcheck-severity }}

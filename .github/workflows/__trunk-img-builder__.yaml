@@ -1,0 +1,319 @@
+---
+name: Custom Image Builder CI
+on:
+  workflow_call:
+    secrets:
+      github-api-rest-token:
+        required: false
+      docker-io-pwd:
+        required: false
+      registry-password:
+        required: false
+      git-token:
+        required: false
+    inputs:
+      # General
+      release:
+        description: If release is true, will enable full workflow to push and release
+        required: false
+        default: false
+        type: boolean
+      release-target-branch:
+        required: false
+        default: ${{ github.ref_name }}
+        type: string
+      build-image:
+        required: false
+        default: ixxel/toolbox:builder-latest
+        type: string
+      workingdir:
+        required: false
+        default: .
+        type: string
+      img-name:
+        required: true
+        type: string
+      tag:
+        required: false
+        type: string
+      github-api-auth:
+        required: false
+        default: false
+        type: boolean
+      build-arg:
+        required: false
+        default: "CI=true"
+        type: string
+      target-dir:
+        required: false
+        default: artefacts
+        type: string
+      component:
+        required: false
+        type: string
+        # Checkov
+      artefact:
+        required: true
+        type: string
+      compact:
+        required: false
+        default: true
+        type: boolean
+      quiet:
+        required: false
+        default: false
+        type: boolean
+      no-guide:
+        required: false
+        default: false
+        type: boolean
+      format:
+        required: false
+        default: cli
+        type: string
+      threshold:
+        required: false
+        default: critical
+        type: string
+      soft-fail:
+        required: false
+        default: true
+        type: boolean
+      gate:
+        required: false
+        default: "50"
+        type: string
+      # podman login
+      podman-docker:
+        required: false
+        type: boolean
+      docker-config:
+        required: false
+        default: true
+        type: boolean
+      podman-registry:
+        required: true
+        type: string
+      podman-username:
+        required: true
+        type: string
+      # podman-password:
+      #   required: true
+      #   type: string
+      tls-verify:
+        required: false
+        type: boolean
+      podman-verbose:
+        required: false
+        default: true
+        type: boolean
+      docker-hub-login:
+        required: false
+        default: true
+        type: boolean
+      # buildkit
+      oci-worker-snapshotter:
+        required: false
+        default: fuse-overlayfs
+        type: string
+      dockerfile-frontend:
+        required: false
+        default: dockerfile.v0
+        type: string
+      dockerfile-name:
+        required: false
+        default: Dockerfile
+        type: string
+      compression-format:
+        required: false
+        default: tar
+        type: string
+      buildkit-inline-buildinfo-attrs:
+        required: false
+        default: true
+        type: boolean
+      buildkit-inline-cache:
+        required: false
+        default: true
+        type: boolean
+      caching:
+        required: false
+        default: true
+        type: boolean
+      cache-registry:
+        required: false
+        type: string
+      push:
+        description: Push img
+        required: false
+        default: true
+        type: boolean
+      # Grype
+      transport:
+        description: transport type for destination (docker,docker-archive,oci-dir,oci-archive,dir,sbom,registry)
+        required: false
+        default: docker-archive
+        type: string
+      fail-on:
+        description: set the return code to 1 if a vulnerability is found with a severity >= the given severity
+        required: false
+        default: critical
+        type: string
+      output:
+        description: report output formatter, formats=[json table cyclonedx template]
+        required: false
+        default: table
+        type: string
+      scope:
+        description: selection of layers to analyze, options=[Squashed AllLayers]
+        required: false
+        default: Squashed
+        type: string
+      template:
+        description: specify the path to a Go template file (requires template output to be selected)
+        required: false
+        default: '""'
+        type: string
+      verbose:
+        description: increase verbosity (-v = info, -vv = debug)
+        required: false
+        default: ""
+        type: string
+      # git tag
+      git-workdir:
+        required: false
+        default: .
+        type: string
+      tag-msg:
+        required: false
+        default: "ci"
+        type: string
+      push-option:
+        required: false
+        default: ci.skip
+        type: string
+      git-email:
+        required: false
+        default: test@mail.com
+        type: string
+        # repo-url:
+        #   required: true
+      release-verify-tag:
+        required: false
+        default: false
+        type: boolean
+  workflow_dispatch:
+jobs:
+  build:
+    name: Build
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    # container:
+    #   image: ${{ inputs.build-image }}
+    #   options: --privileged
+    steps:
+      - name: Clone code
+        id: clone
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+          token: ${{ secrets.git-token }}
+      - name: Git config
+        id: git-config
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+      - name: Get last tag
+        id: get-last-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        with:
+          git-workdir: ${{ inputs.workingdir }}
+          pattern: "${{ inputs.component }}-v[0-9]*.[0-9]*.[0-9]*"
+          starting-tag: ""
+          branch: ${{ inputs.release-target-branch }}
+      - name: Detect bump
+        id: detect-bump
+        uses: ixxeL-DevOps/gha-templates/.github/actions/detect-bump@main
+        with:
+          release-regex: '\s*:package: CI release of docker image ${{ inputs.component }}.+'
+          minor-regex: '^(feat(\/|-|:)[[:alnum:]_.-]+-\(${{ inputs.component }}\).*)$'
+          major-regex: '^((((feat|fix|chore|perf|refactor|build|ci|revert|test)!)|(!(feat|fix|chore|perf|refactor|build|ci|revert|test)))(\/|-|:)[[:alnum:]_.-]+-\(${{ inputs.component }}\).*)$'
+          searching-deepness: 20
+      - name: Bump version
+        id: bump-version
+        uses: ixxeL-DevOps/gha-templates/.github/actions/bump-version@main
+        with:
+          component: ${{ inputs.component }}
+          increment: ${{ steps.detect-bump.outputs.BUMP_KIND }}
+          current-version: ${{ steps.get-last-tag.outputs.LAST_TAG != '' && steps.get-last-tag.outputs.LAST_TAG || format('{0}-v1.0.0', inputs.component) }}
+      - name: Podman login
+        id: podman-login
+        if: ${{ inputs.podman-registry != null }}
+        uses: ixxeL-DevOps/gha-templates/.github/actions/podman-login@main
+        with:
+          podman-docker: ${{ inputs.podman-docker }}
+          docker-config: ${{ inputs.docker-config }}
+          registry: ${{ inputs.podman-registry }}
+          username: ${{ inputs.podman-username }}
+          password: ${{ secrets.registry-password }}
+          tls-verify: ${{ inputs.tls-verify }}
+          verbose: ${{ inputs.podman-verbose }}
+          docker-hub-login: ${{ inputs.docker-hub-login }}
+      - name: Buildkit build
+        id: buildkit-build
+        uses: ixxeL-DevOps/gha-templates/.github/actions/buildkit@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          img-name: ${{ inputs.img-name }}
+          tag: ${{ steps.bump-version.outputs.VERSION }}
+          component: ${{ inputs.component }}
+          target-dir: ${{ inputs.target-dir }}
+          github-api-rest-token: ${{ secrets.github-api-rest-token }}
+          github-api-auth: ${{ inputs.github-api-auth }}
+          dockerfile-frontend: ${{ inputs.dockerfile-frontend }}
+          dockerfile-name: ${{ inputs.dockerfile-name }}
+          build-arg: ${{ inputs.build-arg }}
+          push: ${{ inputs.release }}
+          caching: ${{ inputs.caching }}
+          cache-registry: ${{ inputs.cache-registry }}
+          oci-worker-snapshotter: ${{ inputs.oci-worker-snapshotter }}
+      - name: Grype scan
+        id: grype-scan
+        uses: ixxeL-DevOps/gha-templates/.github/actions/grype@main
+        continue-on-error: true
+        with:
+          image-ref: ${{ inputs.target-dir }}/${{ inputs.img-name }}.tar
+          transport: ${{ inputs.transport }}
+          fail-on: ${{ inputs.fail-on }}
+          output: ${{ inputs.output }}
+          scope: ${{ inputs.scope }}
+          template: ${{ inputs.template }}
+          verbose: ${{ inputs.verbose }}
+      - name: Update changelog
+        id: changelog
+        if: inputs.release
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          release-name: ${{ steps.bump-version.outputs.VERSION }}
+      - name: Git push
+        id: git-push
+        if: inputs.release
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        with:
+          git-token: ${{ secrets.git-token }}
+          git-msg: ":package: CI release of docker image ${{ inputs.component }} version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
+          git-workdir: ${{ inputs.git-workdir }}
+          git-staging-dir: ${{ inputs.workingdir }}
+          push-option: ${{ inputs.push-option }}
+      - name: GH Release
+        id: gh-release
+        if: inputs.release
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        with:
+          tag: ${{ steps.bump-version.outputs.VERSION }}
+          target-branch: ${{ inputs.release-target-branch }}
+          verify-tag: ${{ inputs.release-verify-tag }}
+          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG }}
+        env:
+          GH_TOKEN: ${{ github.token }}

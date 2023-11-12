@@ -1,0 +1,123 @@
+---
+name: Helm unit test
+description: Unit test Helm chart with helm unittest plugin
+author: ixxeL
+inputs:
+  prepare:
+    description: Prepare the job when not running in adequate environment
+    required: false
+    default: "false"
+  plugin-version:
+    description: Plugin version to download
+    required: false
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  strict:
+    description: use strict mode
+    required: false
+    default: "true"
+  values-file:
+    description: name of the values.yaml file
+    required: false
+    default: values.yaml
+  with-subchart:
+    description: include subchart
+    required: false
+    default: "true"
+  tests-dir:
+    description: tests directory relative to workingdir
+    required: false
+    default: tests/*.yaml
+outputs:
+  CHART_NAME:
+    description: chart name
+    value: ${{ steps.helm-unittest.outputs.CHART_NAME }}
+  CHART_VERSION:
+    description: chart version
+    value: ${{ steps.helm-unittest.outputs.CHART_VERSION }}
+  CHART_APP_VERSION:
+    description: chart appVersion
+    value: ${{ steps.helm-unittest.outputs.CHART_APP_VERSION }}
+
+runs:
+  using: composite
+  steps:
+    - id: prepare
+      if: ${{ inputs.prepare == 'true' }}
+      run: |
+        set +e
+        helm plugin list | grep "unittest"
+        if [[ $? = 0 ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Plugin unittest already installed${BLANK}"
+        else
+          echo -e "${YELLOW}[ EXECUTING ] > Installing dependencies${BLANK}"
+          helm plugin install https://github.com/helm-unittest/helm-unittest.git --version "${{ inputs.plugin-version }}"
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m
+        # HELM_PLUGINS: /root/.local/share/helm/plugins
+    - id: helm-unittest
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - Helm-chart unittest ] > Unit testing Helm chart.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Helm version.${BLANK}"
+        helm version --short
+        echo -e "${CYAN}[ INFO ] > Displaying plugins list.${BLANK}"
+        helm plugin list
+
+        echo -e "${YELLOW}[ EXECUTING ] > Checking helm chart ${{ inputs.workingdir }}.${BLANK}"
+        if [[ -d ${{ inputs.workingdir }} ]]
+        then
+          echo -e "${GREEN}[ CHECK SUCCESS ] > Directory exists, proceeding unit tests.${BLANK}"
+        else
+          echo -e "${RED}[ CHECK ERROR ] > Directory doesn't exist, canceling unit tests.${BLANK}"
+          exit 1
+        fi
+        if [[ -f ${{ inputs.workingdir }}/Chart.yaml ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Chart.yaml file detected. Here is the file${BLANK}"
+          yq e ${{ inputs.workingdir }}/Chart.yaml -C
+          CHART_NAME=$(yq e '.name' ${{ inputs.workingdir }}/Chart.yaml)
+          CHART_VERSION=$(yq e '.version' ${{ inputs.workingdir }}/Chart.yaml)
+          CHART_APP_VERSION=$(yq e '.appVersion' ${{ inputs.workingdir }}/Chart.yaml)
+          echo -e "${CYAN}[ INFO ] > The chart [[ ${YELLOW}${CHART_NAME}${CYAN} ]] has version --> [[ ${YELLOW}${CHART_VERSION}${CYAN} ]] and appVersion --> [[ ${YELLOW}${CHART_APP_VERSION}${CYAN} ]]${BLANK}"
+        else
+          echo -e "${PURPLE}[ WARNING ] > Chart.yaml file NOT detected.${BLANK}"
+          exit 1
+        fi
+
+        echo -e "${YELLOW}[ EXECUTING ] > Helm unit testing on chart ${CHART_NAME}.${BLANK}"
+        helm unittest ${{ inputs.workingdir }} -f ${{ inputs.tests-dir }} \
+                                --with-subchart=${{ inputs.with-subchart }} \
+                                --color \
+                                --strict=${{ inputs.strict }}
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ CHECK SUCCESS ] > Helm Unit tests succeeded without any error.${BLANK}"
+          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_OUTPUT
+          echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "CHART_APP_VERSION=$CHART_APP_VERSION" >> $GITHUB_OUTPUT
+        else
+          echo -e "${PURPLE}[ CHECK ERROR ] > Helm Unit tests didn't succeed, please review your helm chart.${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m
+        HELM_PLUGINS: /root/.local/share/helm/plugins

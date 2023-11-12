@@ -1,0 +1,73 @@
+---
+name: Chart update
+description: Updating chart version
+author: ixxeL
+inputs:
+  workingdir:
+    description: directory in which to find the Chart.yaml
+    required: false
+    default: .
+  evaluate-update:
+    description: Evaluate if update is needed
+    required: false
+    default: "true"
+  promotion-version:
+    description: Chart version to update to
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - id: chart-update
+      run: |
+        echo -e "${BLUE}[ STEP - Helm-chart update ] > Updating Helm chart.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > yq version.${BLANK}"
+        yq --version
+
+        if [[ -f ${{ inputs.workingdir }}/Chart.yaml ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Chart.yaml file detected. Here is the file${BLANK}"
+          yq e ${{ inputs.workingdir }}/Chart.yaml -C
+          current_name=$(yq e '.name' ${{ inputs.workingdir }}/Chart.yaml)
+          current_version=$(yq e '.version' ${{ inputs.workingdir }}/Chart.yaml)
+          current_app_version=$(yq e '.appVersion' ${{ inputs.workingdir }}/Chart.yaml)
+          echo -e "${CYAN}[ INFO ] > The chart [[ ${YELLOW}${current_name}${CYAN} ]] has currently the version --> [[ ${YELLOW}${current_version}${CYAN} ]] and appVersion --> [[ ${YELLOW}${current_app_version}${CYAN} ]]${BLANK}"
+
+          if [[ ${{ inputs.evaluate-update }} = true ]]
+          then
+            PROMOTION_VERSION=${{ inputs.promotion-version }}
+            echo -e "${YELLOW}[ EXECUTING ] > Evaluating if upgrade is necessary for version ${PURPLE}${PROMOTION_VERSION}${YELLOW} in target repository${BLANK}"
+
+            function version { echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'; }
+
+            if [[ $PROMOTION_VERSION == "$current_version" ]]
+            then
+              echo -e "${GREEN}[ CHECK SUCCESS ] > Current version ${YELLOW}${current_version}${GREEN} is the same as promote version ${YELLOW}${PROMOTION_VERSION}${GREEN} Doing nothing.${BLANK}"
+              exit 0
+            else
+              if [[ $(version $PROMOTION_VERSION) > $(version $current_version) ]]
+              then
+                echo -e "${CYAN}[ INFO ] > Promote version ${PURPLE}${PROMOTION_VERSION}${CYAN} is GREATER than current version ${PURPLE}${current_version}${BLANK}"
+                echo -e "${YELLOW}[ EXECUTING ] > Proceeding upgrade${BLANK}"
+              elif [[ $(version $PROMOTION_VERSION) < $(version $current_version) ]]
+              then
+                echo -e "${GREEN}[ CHECK SUCCESS ] > Promote version ${PURPLE}${PROMOTION_VERSION}${GREEN} is LOWER than current version ${PURPLE}${current_version}${GREEN} Doing nothing.${BLANK}"
+                exit 0
+              fi
+            fi
+          fi
+          yq e ".version = \"${PROMOTION_VERSION}\"" -i ${{ inputs.workingdir }}/Chart.yaml
+          echo -e "${CYAN}[ INFO ] > The chart version has been modified to --> [[ ${YELLOW}${PROMOTION_VERSION}${CYAN} ]]${BLANK}"
+        else
+          echo -e "${RED}[ ERROR ] > Chart.yaml file NOT detected.${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

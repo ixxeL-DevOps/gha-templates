@@ -1,0 +1,46 @@
+---
+name: Decrypt password
+description: Decrypting password with gpg
+author: ixxeL
+inputs:
+  hash-secret:
+    required: true
+    description: hash secret
+  token:
+    required: true
+    description: token to decrypt
+outputs:
+  DECRYPTED_TOKEN:
+    description: chart name
+    value: ${{ steps.decrypt-pwd.outputs.DECRYPTED_TOKEN }}
+
+runs:
+  using: composite
+  steps:
+    - id: decrypt-pwd
+      run: |
+        echo -e "${BLUE}[ STEP - DECRYPT PWD ] > Decrypting password with gpg${BLANK}"
+        echo -e "${CYAN}[ INFO ] > gpg version.${BLANK}"
+        gpg --version
+
+        echo -e "${YELLOW}[ EXECUTING ] > Decrypting password${BLANK}"
+        SECRET="${{ inputs.hash-secret }}"
+        DECRYPTED_TOKEN=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ inputs.token }}" | base64 -d))
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ SUCCESS ] > Decryption success ! ${BLANK}"
+        else
+          echo -e "${RED}[ FAIL ] > Decryption failed ! ${BLANK}"
+          exit 1
+        fi
+        echo "::add-mask::$DECRYPTED_TOKEN"
+        echo "DECRYPTED_TOKEN=$DECRYPTED_TOKEN" >> $GITHUB_OUTPUT
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

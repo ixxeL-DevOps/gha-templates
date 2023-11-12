@@ -1,0 +1,103 @@
+---
+name: Helm package
+description: Package Helm chart with helm CLI
+author: ixxeL
+inputs:
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  chart-name:
+    description: name of the chart
+    required: false
+  chart-version:
+    description: version of the chart
+    required: false
+  chart-appversion:
+    description: appversion of the chart
+    required: false
+  values-file:
+    description: name of the values.yaml file
+    required: false
+    default: values.yaml
+  destination:
+    required: false
+    default: helm_package_dir
+    description: packaging directory
+outputs:
+  CHART_NAME:
+    description: chart name
+    value: ${{ steps.helm-package.outputs.CHART_NAME }}
+  CHART_VERSION:
+    description: chart version
+    value: ${{ steps.helm-package.outputs.CHART_VERSION }}
+  CHART_APP_VERSION:
+    description: chart appVersion
+    value: ${{ steps.helm-package.outputs.CHART_APP_VERSION }}
+  PKG_DIR:
+    description: chart name
+    value: ${{ steps.helm-package.outputs.PKG_DIR }}
+  PKG_PATH:
+    description: chart version
+    value: ${{ steps.helm-package.outputs.PKG_PATH }}
+  PKG_NAME:
+    description: chart appVersion
+    value: ${{ steps.helm-package.outputs.PKG_NAME }}
+
+runs:
+  using: composite
+  steps:
+    - id: helm-package
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - Helm-chart Packaging ] > Packaging Helm chart.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Helm version.${BLANK}"
+        helm version --short
+
+        echo -e "${YELLOW}[ EXECUTING ] > Packaging helm chart ${{ inputs.workingdir }}.${BLANK}"
+        if [[ -d ${{ inputs.workingdir }} ]]
+        then
+          echo -e "${GREEN}[ CHECK SUCCESS ] > Directory exists, proceeding Packaging.${BLANK}"
+        else
+          echo -e "${RED}[ CHECK ERROR ] > Directory doesn't exist, canceling Packaging.${BLANK}"
+          exit 1
+        fi
+        if [[ -f ${{ inputs.workingdir }}/Chart.yaml ]]
+        then
+          echo -e "${CYAN}[ INFO ] > The helm chart ${YELLOW}${{ inputs.chart-name }}${CYAN} will be packaged as version ${YELLOW}${{ inputs.chart-version }}${CYAN} and appVersion ${YELLOW}${{ inputs.chart-appversion }}${CYAN} on directory target ${YELLOW}${{ inputs.destination }}${CYAN}${BLANK}"
+          # yq e ".image.tag = \"${{ inputs.chart-appversion }}\"" -i ${{ inputs.workingdir }}/${{ inputs.values-file }}
+          # yq e ".image.tag = \"${{ inputs.chart-appversion }}\"" -i ${{ inputs.workingdir }}/values-template.yaml
+          PKG_OUTPUT=$(helm package ${{ inputs.workingdir }} --destination=${{ inputs.destination }} \
+                                                  --version=${{ inputs.chart-version }} \
+                                                  --app-version=${{ inputs.chart-appversion }})
+
+          if [[ $? = 0 ]]
+          then
+            PKG_NAME=$(echo "${PKG_OUTPUT}" | awk -F '/' '{print $NF}')
+            PKG_PATH=$(realpath ${{ inputs.destination }}/${PKG_NAME})
+            echo "CHART_NAME=${{ inputs.chart-name }}" >> $GITHUB_OUTPUT
+            echo "CHART_VERSION=${{ inputs.chart-version }}" >> $GITHUB_OUTPUT
+            echo "CHART_APP_VERSION=${{ inputs.chart-appversion }}" >> $GITHUB_OUTPUT
+            echo "PKG_NAME=${PKG_NAME}" >> $GITHUB_OUTPUT
+            echo "PKG_PATH=${PKG_PATH}" >> $GITHUB_OUTPUT
+            echo "PKG_DIR=${{ inputs.destination }}" >> $GITHUB_OUTPUT
+            echo -e "${CYAN}[ INFO ] > Package [[ ${YELLOW}${PKG_NAME}${CYAN} ]] created --> ${PKG_OUTPUT}${BLANK}"
+            ls -la --color ${{ inputs.destination }}
+            echo -e "${GREEN}[ SUCCESS ] > Helm packaging succeeded without any error.${BLANK}"
+          else
+            echo -e "${RED}[ ERROR ] > Helm packaging didn't succeed !${BLANK}"
+            exit 1
+          fi
+        else
+          echo -e "${PURPLE}[ WARNING ] > Chart.yaml file NOT detected.${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

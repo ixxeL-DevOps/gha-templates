@@ -1,0 +1,14 @@
+---
+extends: default
+rules:
+  line-length:
+    max: 600
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+    level: warning
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+    check-multi-line-strings: false
+  key-duplicates:
+    ignore: |

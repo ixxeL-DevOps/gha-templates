@@ -1,0 +1,213 @@
+---
+name: Buildkit build
+description: Build docker images with Buildkit
+author: ixxeL
+inputs:
+  img-name:
+    description: name of the image
+    required: true
+  tag:
+    description: tagged name to apply to the built image
+    required: true
+  component:
+    required: false
+    description: name of the component to build
+  target-dir:
+    required: false
+    default: artefacts
+    description: name of the directory to store created artefacts in
+  oci-worker-snapshotter:
+    required: false
+    default: fuse-overlayfs
+    description: driver of the oci snapshotter
+  build-arg:
+    description: argument=value to supply to the builder
+    required: false
+    default: ""
+  dockerfile-frontend:
+    required: false
+    default: "dockerfile.v0"
+    description: dockerfile frontend for buildkit
+  dockerfile-name:
+    required: false
+    default: Dockerfile
+    description: name of the Dockerfile file
+  compression-format:
+    required: false
+    default: docker-archive
+    description: type of the compression format
+  buildkit-inline-buildinfo-attrs:
+    required: false
+    default: "true"
+    description: test
+  buildkit-inline-cache:
+    required: false
+    default: "true"
+    description: none
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  github-api-auth:
+    description: Authenticate to github API
+    required: false
+    default: "false"
+  github-api-rest-token:
+    description: Github API token
+    required: false
+  caching:
+    description: Usin cache registry
+    required: false
+    default: "true"
+  cache-registry:
+    description: Cache registry
+    required: false
+  push:
+    description: Push img
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - id: buildkit-build
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - BUILDING IMAGE ] > Building docker image ${{ inputs.img-name }}:${{ inputs.tag }} with Buildkit.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Buildkit version.${BLANK}"
+        buildctl --version
+
+        function assert_result()
+        {
+          if [[ $? = 0 ]]
+          then
+            echo -e "${GREEN}[ SUCCESS ] > $1 success ! ${BLANK}"
+          else
+            echo -e "${RED}[ FAIL ] > $1 failed ! ${BLANK}"
+            exit 1
+          fi
+        }
+
+        who=$(whoami)
+        if [[ "${who}" != "root" ]]
+        then
+          echo -e "${CYAN}[ INFO ] > User is not root --> ${who} ${BLANK}"
+          BUILDKITD_FLAGS+=" --oci-worker-no-process-sandbox"
+          mkdir -p ~/.config/buildkit
+          touch ~/.config/buildkit/buildkitd.toml
+          BUILDKIT_CFG=~/.config/buildkit/buildkitd.toml
+        else
+          echo -e "${CYAN}[ INFO ] > User is Root ${BLANK}"
+          mkdir -p /etc/buildkit
+          touch /etc/buildkit/buildkitd.toml
+          BUILDKIT_CFG=/etc/buildkit/buildkitd.toml
+        fi
+        BUILDKITD_FLAGS+=" --config ${BUILDKIT_CFG} --oci-worker-snapshotter=${{ inputs.oci-worker-snapshotter }}"
+        export BUILDKITD_FLAGS=${BUILDKITD_FLAGS}
+        echo -e "${CYAN}[ INFO ] > Displaying Buildkit BUILDKITD_FLAGS --> ${BUILDKITD_FLAGS} ${BLANK}"
+
+        if [[ "${{ inputs.github-api-auth }}" = true ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Authenticating to Github API${BLANK}"
+          curl -sSfL -H "Authorization: token ${{ inputs.github-api-rest-token }}" https://api.github.com
+        fi
+
+        if [[ "${{ inputs.compression-format }}" = "docker-archive" ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Using docker format build${BLANK}"
+          export COMPRESSION_FORMAT=docker
+        elif [[ "${{ inputs.compression-format }}" = "oci-archive" ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Using oci format build${BLANK}"
+          export COMPRESSION_FORMAT=oci
+        else
+          echo -e "${CYAN}[ INFO ] > Using tar format build${BLANK}"
+          export COMPRESSION_FORMAT=tar
+        fi
+        mkdir -p ${{ inputs.target-dir }}
+
+        BUILD_ARG=CREATION_DATE=$(TZ='Europe/Paris' date -Iseconds)
+        BUILD_ARG+="|${{ inputs.build-arg }}"
+        if [ "$BUILD_ARG" ]
+        then
+          [[ ! "$BUILD_ARG" =~ ^\|.+ ]] || BUILD_ARG="${BUILD_ARG:1}"
+          full_str=${BUILD_ARG//|/ --opt build-arg:}
+          BUILD_ARGS="--opt build-arg:$full_str"
+          echo -e "${CYAN}[ INFO ] > Build args are the following${BLANK}"
+          echo "${BUILD_ARGS}"
+        fi
+
+        if [[ -n "${{ inputs.component }}" ]]
+        then
+          CACHE_TAG="${{ inputs.component }}-cache"
+          LATEST_TAG="${{ inputs.component }}-latest"
+        else
+          CACHE_TAG="cache"
+          LATEST_TAG="latest"
+        fi
+
+        echo -e "${CYAN}[ INFO ] > Using cache tag ${YELLOW}${CACHE_TAG}${CYAN} and latest tag ${YELLOW}${LATEST_TAG}${BLANK}"
+        if [[ "${{ inputs.caching }}" = true && "${{ inputs.cache-registry }}" != "" ]]
+        then
+          echo -e "${YELLOW}[ EXECUTING ] > Executing build of ${PURPLE}${{ inputs.img-name }}:${{ inputs.tag}}${YELLOW}${BLANK}"
+          if [[ "${{ inputs.push }}" = true ]]
+          then
+            echo -e "${CYAN}[ INFO ] > Push mode on. Pushing image ${PURPLE}${{ inputs.img-name }}:${{ inputs.tag}}${YELLOW} to registry ${{ inputs.cache-registry }}${BLANK}"
+            buildctl-daemonless.sh build \
+                                  --import-cache type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:${CACHE_TAG} \
+                                  --export-cache type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:${CACHE_TAG},mode=max,push=true \
+                                  --frontend=${{ inputs.dockerfile-frontend }} \
+                                  --local context=${{ inputs.workingdir }} \
+                                  --local dockerfile=${{ inputs.workingdir }} \
+                                  --opt filename=./${{ inputs.dockerfile-name }} \
+                                  --output type=image,\"name=${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ inputs.tag}},${{ inputs.cache-registry }}/${{ inputs.img-name }}:${LATEST_TAG}\",push=${{ inputs.push }} \
+                                  --metadata-file metadata.json \
+                                  ${BUILD_ARGS}
+            assert_result "${{ inputs.img-name }}:${{ inputs.tag}} build"
+          else
+            echo -e "${CYAN}[ INFO ] > Tarball mode on. Compressing image ${PURPLE}${{ inputs.img-name }}:${{ inputs.tag}}${YELLOW} to tarball ${{ inputs.target-dir }}/${{ inputs.img-name }}.tar${BLANK}"
+            buildctl-daemonless.sh build \
+                                  --import-cache type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:${CACHE_TAG} \
+                                  --export-cache type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:${CACHE_TAG},mode=max,push=true \
+                                  --frontend=${{ inputs.dockerfile-frontend }} \
+                                  --local context=${{ inputs.workingdir }} \
+                                  --local dockerfile=${{ inputs.workingdir }} \
+                                  --opt filename=./${{ inputs.dockerfile-name }} \
+                                  --output type=${COMPRESSION_FORMAT},name=${{ inputs.img-name }}:${{ inputs.tag}},mode=min,dest=${{ inputs.target-dir }}/${{ inputs.img-name }}.tar \
+                                  --metadata-file metadata.json \
+                                  ${BUILD_ARGS}
+            assert_result "${{ inputs.img-name }}:${{ inputs.tag}} build"
+          fi
+        else
+          echo -e "${CYAN}[ INFO ] > No caching option activated (or no caching registry provided), no push mode activated${BLANK}"
+          echo -e "${YELLOW}[ EXECUTING ] > Executing build of ${{ inputs.img-name }}:${{ inputs.tag}} with buildkit${BLANK}"
+          buildctl-daemonless.sh build \
+                                --frontend=${{ inputs.dockerfile-frontend }} \
+                                --local context=${{ inputs.workingdir }} \
+                                --local dockerfile=${{ inputs.workingdir }} \
+                                --opt filename=./${{ inputs.dockerfile-name }} \
+                                --export-cache type=inline \
+                                --output type=${COMPRESSION_FORMAT},name=${{ inputs.img-name }}:${{ inputs.tag}},mode=min,dest=${{ inputs.target-dir }}/${{ inputs.img-name }}.tar \
+                                --metadata-file metadata.json \
+                                ${BUILD_ARGS}
+        fi
+        cat metadata.json | jq -C
+        rm metadata.json
+        if [[ $? = 0 ]]
+        then
+          size=$(du -sh ${{ inputs.target-dir }}/${{ inputs.img-name }}.tar | awk '{print $1}')
+          echo -e "${GREEN}[ SUCCESS ] > Docker image ${YELLOW}${{ inputs.img-name }}:${{ inputs.tag}}${GREEN} successfully built with Buildkit. SIZE --> [ ${PURPLE}${size}${GREEN} ]${BLANK}"
+        else
+          echo -e "${RED}[ FAIL ] > Docker image ${{ inputs.img-name }}:${{ inputs.tag}} failed to build with Buildkit !${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m
+        DOCKER_CONFIG: /root/.docker

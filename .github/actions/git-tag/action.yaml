@@ -1,0 +1,79 @@
+---
+name: Git tag
+description: Tagging git repo
+author: ixxeL
+inputs:
+  tag-msg:
+    required: false
+    default: "ci"
+    description: msg of the tag
+  tag-value:
+    required: true
+    description: tag to use
+  commit-sha:
+    required: false
+    description: commit sha to tag
+  git-workdir:
+    required: false
+    default: .
+    description: working directory of git
+  tls-verify:
+    required: false
+    default: "false"
+    description: tls verification
+  push-option:
+    required: false
+    default: "ci skip"
+    description: option of the git push
+  git-email:
+    required: false
+    default: username@users.noreply.github.com
+    description: default git email
+
+runs:
+  using: composite
+  steps:
+    - id: git-tag
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - TAG GIT REPO ] > Tagging git repo ${REPO_URL}${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Git version.${BLANK}"
+        git version
+
+        echo -e "${YELLOW}[ EXECUTING ] > Showing repo information.${BLANK}"
+        echo -e "${CYAN}[ INFO ] > git status.${BLANK}"
+        git -C ${{ inputs.git-workdir }} -c color.status=always status
+        echo -e "${CYAN}[ INFO ] > git diff.${BLANK}"
+        git -C ${{ inputs.git-workdir }} diff --color=always
+        echo -e "${CYAN}[ INFO ] > git branch.${BLANK}"
+        git -C ${{ inputs.git-workdir }} branch
+        echo -e "${CYAN}[ INFO ] > git origin.${BLANK}"
+        git -C ${{ inputs.git-workdir }} remote show origin
+
+        if [[ -n "${{ inputs.commit-sha }}" ]]
+        then
+          COMMIT_TAG=${{ inputs.commit-sha }}
+        else
+          COMMIT_TAG="current"
+        fi
+        echo -e "${YELLOW}[ EXECUTING ] > tag ${PURPLE}${{ inputs.tag-value }}${YELLOW} on ${PURPLE}${COMMIT_TAG}${YELLOW} commit and push to destination ${PUSH_URL}${BLANK}"
+        git -C ${{ inputs.git-workdir }} tag -a ${{ inputs.tag-value }} ${{ inputs.commit-sha }} -m "${TAG_MSG}"
+        git -C ${{ inputs.git-workdir }} push origin ${{ inputs.tag-value }} --push-option ${{ inputs.push-option }}
+
+        if [ $? -eq 0 ]
+        then
+          echo -e "${GREEN}[ SUCCESS ] New tag added to origin: ${{ inputs.tag-value }}${BLANK}"
+          exit 0
+        else
+          echo -e "${RED}[ ERROR ] Could not add tag${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

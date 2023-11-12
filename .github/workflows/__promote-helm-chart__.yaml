@@ -1,0 +1,186 @@
+---
+name: Promote Helm chart
+on:
+  workflow_call:
+    secrets:
+      git-token:
+        required: false
+      helm-registry-pwd:
+        required: false
+    inputs:
+      # General
+      release:
+        description: If release is true, will enable full workflow to push and release
+        required: false
+        default: false
+        type: boolean
+      workingdir:
+        required: false
+        default: .
+        type: string
+      helm-image:
+        description: Docker image used for CI jobs
+        required: false
+        default: ixxel/toolbox:helm-latest
+        type: string
+      # Helm global
+      helm-chart-name:
+        description: Name of the chart to promote
+        required: true
+        type: string
+      helm-chart-version:
+        description: Version of the chart to promote
+        required: false
+        type: string
+      helm-force-update:
+        required: false
+        default: true
+        type: boolean
+      helm-skip-tls:
+        required: false
+        default: true
+        type: boolean
+      # helm pull
+      helm-pull-repo-name:
+        required: false
+        default: whbox-pp
+        type: string
+      helm-pull-repo-url:
+        required: false
+        default: https://whbox-chartmuseum.pp.dktapp.cloud
+        type: string
+      helm-pull-repo-username:
+        required: false
+        default: root
+        type: string
+      helm-devel:
+        required: false
+        default: false
+        type: boolean
+      helm-untar:
+        required: false
+        default: false
+        type: boolean
+      helm-fetch-latest:
+        required: false
+        default: "true"
+        type: string
+      # helm push
+      helm-push-repo-name:
+        required: false
+        default: whbox-pr
+        type: string
+      helm-push-repo-url:
+        required: false
+        default: https://whbox-chartmuseum.dktapp.cloud
+        type: string
+      helm-push-repo-username:
+        required: false
+        default: dkt
+        type: string
+      helm-push-type:
+        required: false
+        default: chartmuseum
+        type: string
+      # Vault
+      vault-enabled:
+        required: false
+        default: true
+        type: boolean
+      vault-url:
+        required: false
+        default: https://vault.dktapp.cloud
+        type: string
+      vault-namespace:
+        required: false
+        default: inix
+        type: string
+      vault-role:
+        required: false
+        default: whbox-ga-role
+        type: string
+jobs:
+  promoting-helm-chart:
+    name: promoting-helm-chart
+    timeout-minutes: 8
+    runs-on: [self-hosted, decathlon]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Get secrets from Vault Preprod
+        id: get-secrets-pp
+        if: inputs.vault-enabled == true
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://vault.pp.dktapp.cloud
+          namespace: ${{ inputs.vault-namespace }}
+          method: jwt
+          role: ${{ inputs.vault-role }}
+          secrets: |
+            whbox-tools/data/chartmuseum/auth password | CHARTMUSEUM_PP_PASSWORD
+      - name: Get secrets from Vault Prod
+        id: get-secrets-pr
+        if: inputs.vault-enabled == true
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://vault.dktapp.cloud
+          namespace: ${{ inputs.vault-namespace }}
+          method: jwt
+          role: ${{ inputs.vault-role }}
+          secrets: |
+            whbox-tools/data/gh-actions GHA_PERSONNAL_ADMIN_TOKEN | GHA_PERSONNAL_ADMIN_TOKEN ;
+            whbox-tools/data/chartmuseum/auth password | CHARTMUSEUM_PR_PASSWORD
+      - name: Helm pull
+        id: helm-pull
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-pull@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          fetch-latest: ${{ inputs.helm-fetch-latest }}
+          untar: ${{ inputs.helm-untar }}
+          chart-name: ${{ inputs.helm-chart-name }}
+          chart-version: ${{ inputs.helm-chart-version }}
+          devel: ${{ inputs.helm-devel }}
+          repo-name: ${{ inputs.helm-pull-repo-name }}
+          repo-url: ${{ inputs.helm-pull-repo-url }}
+          repo-username: ${{ inputs.helm-pull-repo-username }}
+          repo-password: ${{ steps.get-secrets-pp.outputs.CHARTMUSEUM_PP_PASSWORD }}
+          force-update: ${{ inputs.helm-force-update }}
+          skip-tls: ${{ inputs.helm-skip-tls }}
+      - name: Helm pushing with Vault
+        id: helm-push-vault
+        if: inputs.vault-enabled == true
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-push@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          chart-name: ${{ inputs.helm-chart-name }}
+          chart-version: ${{ steps.helm-pull.outputs.CHART_VERSION }}
+          chart-appversion: ${{ steps.helm-pull.outputs.CHART_APP_VERSION }}
+          devel: ${{ inputs.helm-devel }}
+          repo-name: ${{ inputs.helm-push-repo-name }}
+          repo-url: ${{ inputs.helm-push-repo-url }}
+          repo-username: ${{ inputs.helm-push-repo-username }}
+          repo-password: ${{ steps.get-secrets-pr.outputs.CHARTMUSEUM_PR_PASSWORD }}
+          force-update: ${{ inputs.helm-force-update }}
+          skip-tls: ${{ inputs.helm-skip-tls }}
+          push-type: ${{ inputs.helm-push-type }}
+          pkg-path: ${{ steps.helm-pull.outputs.PULLED_PKG_PATH }}
+      - name: Helm pushing
+        id: helm-push
+        if: inputs.vault-enabled == false
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-push@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          chart-name: ${{ inputs.helm-chart-name }}
+          chart-version: ${{ steps.helm-pull.outputs.CHART_VERSION }}
+          chart-appversion: ${{ steps.helm-pull.outputs.CHART_APP_VERSION }}
+          devel: ${{ inputs.helm-devel }}
+          repo-name: ${{ inputs.helm-push-repo-name }}
+          repo-url: ${{ inputs.helm-push-repo-url }}
+          repo-username: ${{ inputs.helm-push-repo-username }}
+          repo-password: ${{ secrets.helm-registry-pwd }}
+          force-update: ${{ inputs.helm-force-update }}
+          skip-tls: ${{ inputs.helm-skip-tls }}
+          push-type: ${{ inputs.helm-push-type }}
+          pkg-path: ${{ steps.helm-pull.outputs.PULLED_PKG_PATH }}

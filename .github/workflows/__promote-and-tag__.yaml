@@ -1,0 +1,182 @@
+##################################################
+# DO NOT CALL DIRECTLY THIS WORKFLOW ON PROJECTS #
+##################################################
+#
+# Define a tag, promote in GAR and git tag accordingly
+#
+
+---
+name: Retag img to specific env and git tag accordingly
+on:
+  workflow_call:
+    secrets:
+      git-admin-token:
+        required: false
+      git-token:
+        required: false
+    inputs:
+      # GCP auth
+      workload_identity_provider:
+        required: true
+        type: string
+      service_account:
+        required: true
+        type: string
+      # GAR
+      gcp-registry:
+        description: GCP registry name
+        required: true
+        type: string
+      gcp-repository:
+        description: GCP repository the image is stored in
+        required: true
+        type: string
+      image-name:
+        description: Name of the docker image
+        required: true
+        type: string
+      original-tag:
+        description: "Image original tag (ex: master-*)"
+        required: true
+        type: string
+      target-env:
+        description: name of the target environment for deployment/retag
+        required: false
+        default: test
+        type: string
+      # git tag
+      push-option:
+        required: false
+        default: ci.skip
+        type: string
+      git-workdir:
+        required: false
+        default: .
+        type: string
+      gh-release:
+        required: false
+        default: "true"
+        type: string
+      release-target-branch:
+        required: false
+        default: ${{ github.ref_name }}
+        type: string
+      # Vault
+      vault-enabled:
+        required: false
+        default: false
+        type: boolean
+      vault-url:
+        required: false
+        default: https://vault.pp.dktapp.cloud
+        type: string
+      vault-namespace:
+        required: false
+        default: inix
+        type: string
+      vault-role:
+        required: false
+        default: whbox-ga-role
+        type: string
+      vault-secret-path:
+        required: false
+        default: whbox-tools/data/gh-actions
+        type: string
+
+jobs:
+  promote-and-release:
+    name: 🚀 Promote and Release
+    runs-on: [self-hosted, decathlon]
+    timeout-minutes: 15
+    permissions:
+      checks: write
+      contents: write
+      deployments: write
+      issues: write
+      id-token: write
+      pull-requests: write
+      statuses: write
+    outputs:
+      img-digest: ${{ steps.get-img-info.outputs.IMG_DIGEST }}
+      img-sha: ${{ steps.get-img-info.outputs.IMG_SHA }}
+    steps:
+      - name: Get secrets
+        id: get-secrets
+        if: inputs.vault-enabled == true
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ inputs.vault-url }}
+          namespace: ${{ inputs.vault-namespace }}
+          method: jwt
+          role: ${{ inputs.vault-role }}
+          secrets: |
+            whbox-tools/data/gh-actions GHA_PERSONNAL_ADMIN_TOKEN | GHA_PERSONNAL_ADMIN_TOKEN
+      - name: Clone code with Vault
+        uses: actions/checkout@v4
+        if: inputs.vault-enabled == true
+        with:
+          fetch-depth: 0
+          token: ${{ steps.get-secrets.outputs.GHA_PERSONNAL_ADMIN_TOKEN }}
+      - name: Clone code
+        uses: actions/checkout@v4
+        if: inputs.vault-enabled == false
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.git-admin-token }}
+      - name: Get img SHA
+        id: get-img-info
+        uses: ixxeL-DevOps/gha-templates/.github/actions/get-img-info@main
+        with:
+          image-fullname: ${{ inputs.gcp-registry }}/${{ inputs.gcp-repository }}/${{ inputs.image-name }}
+          image-tag: ${{ inputs.original-tag }}
+      - name: Git config
+        id: git-config
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+      - name: Get last tag
+        id: get-last-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+          branch: ${{ inputs.release-target-branch }}
+          pattern: "^${{ inputs.target-env }}*"
+          starting-tag: ""
+      - name: 🏷️ Git tag
+        id: git-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        with:
+          tag-msg: "CI auto Git tag for ${{ inputs.gcp-registry }}/${{ inputs.gcp-repository }}/${{ inputs.image-name }} deployment to ${{ inputs.target-env }} env"
+          tag-value: "${{ inputs.target-env }}-${{github.run_number}}"
+          commit-sha: ${{ steps.get-img-info.outputs.IMG_SHA }}
+          git-workdir: ${{ inputs.git-workdir }}
+          push-option: ${{ inputs.push-option }}
+      - name: 🚀 GH Release with Vault
+        id: gh-release-vault
+        if: inputs.vault-enabled && inputs.gh-release == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        with:
+          tag: "${{ inputs.target-env }}-${{github.run_number}}"
+          verify-tag: true
+          target-branch: ${{ inputs.release-target-branch }}
+          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG }}
+        env:
+          GH_TOKEN: ${{ steps.get-secrets.outputs.GHA_PERSONNAL_ADMIN_TOKEN }}
+      - name: 🚀 GH Release
+        id: gh-release
+        if: inputs.vault-enabled == false && inputs.gh-release == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        with:
+          tag: "${{ inputs.target-env }}-${{github.run_number}}"
+          verify-tag: true
+          target-branch: ${{ inputs.release-target-branch }}
+          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG }}
+        env:
+          GH_TOKEN: ${{ secrets.git-admin-token }}
+      - name: 🏷️ GCloud add tag
+        id: gcloud-add-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-add-tag@main
+        with:
+          image-fullname: ${{ inputs.gcp-registry }}/${{ inputs.gcp-repository }}/${{ inputs.image-name }}
+          src-image-tag: ${{ inputs.original-tag }}
+          dst-image-tag: "${{ inputs.target-env }}-${{github.run_number}}"

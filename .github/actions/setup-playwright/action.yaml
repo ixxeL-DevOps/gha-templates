@@ -1,0 +1,38 @@
+---
+name: Playwright setup
+description: setup Playwright
+author: ixxeL
+inputs:
+  cache:
+    description: use cache or not
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Playwright cache
+      if: inputs.cache == 'true'
+      id: playwright-setup-cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+    - name: Install Playwright Browsers
+      if: (steps.playwright-setup-cache.outputs.cache-hit != 'true') && (inputs.cache == 'true')
+      shell: bash
+      id: install-playwright-cache
+      run: pnpm playwright install --with-deps
+    - name: Install Playwright Browsers deps only
+      if: (steps.playwright-setup-cache.outputs.cache-hit != 'true') && (inputs.cache == 'true')
+      shell: bash
+      id: install-playwright-deps-cache
+      run: pnpm playwright install-deps
+    - name: Install Playwright Browsers
+      if: inputs.cache == 'false'
+      shell: bash
+      id: install-playwright
+      run: pnpm playwright install --with-deps

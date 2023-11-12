@@ -1,0 +1,11 @@
+---
+name: Update Pull Request title
+on:
+  pull_request:
+    types:
+      - opened
+jobs:
+  update-pr:
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__update-PR-classic__.yaml@main
+    secrets:
+      git-token: ${{ secrets.PAT }}

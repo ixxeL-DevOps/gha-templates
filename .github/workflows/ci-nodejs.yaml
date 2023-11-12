@@ -1,0 +1,129 @@
+---
+name: CI building
+on:
+  workflow_call:
+    secrets:
+      SONAR_TOKEN:
+        required: false
+      GHA_PERSONNAL_ADMIN_TOKEN:
+        required: false
+      PLAYWRIGHT_LOGIN:
+        required: false
+      PLAYWRIGHT_PASSWORD:
+        required: false
+      FEDID_CLIENT_ID:
+        required: false
+      BFF_KEY:
+        required: false
+      SNYK_TOKEN:
+        required: false
+      PRISMA_USER:
+        required: false
+      PRISMA_PASS:
+        required: false
+    inputs:
+      workingdir:
+        required: false
+        type: string
+        default: .
+      environment:
+        required: false
+        type: string
+        default: development
+      quick-fail:
+        required: false
+        type: string
+        default: "false"
+      git-enable-tag:
+        required: false
+        default: "true"
+        type: string
+      gh-release:
+        required: false
+        default: "false"
+        type: string
+      workload_identity_provider:
+        required: false
+        type: string
+        default: "test"
+      service_account:
+        required: false
+        type: string
+        default: "test"
+      sonar-args:
+        required: false
+        type: string
+      image-name:
+        required: false
+        type: string
+      playwright-cache:
+        required: false
+        type: string
+      gcs-bucket-name:
+        required: false
+        type: string
+      gcs-reports-path:
+        required: false
+        type: string
+      docker-registry:
+        required: false
+        type: string
+      docker-buildargs:
+        required: false
+        type: string
+      docker-sbom:
+        required: false
+        default: true
+        type: boolean
+      docker-provenance:
+        required: false
+        default: true
+        type: boolean
+      gcp-base-url:
+        required: false
+        type: string
+        default: test
+      gcp-project-id:
+        required: false
+        type: string
+        default: test
+      gcp-gar-id:
+        required: false
+        type: string
+        default: test
+
+jobs:
+  ci-nodejs:
+    concurrency:
+      group: "${{ github.workflow }}-${{ github.ref }}"
+      cancel-in-progress: true
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__ci-nodejs__.yaml@main
+    with:
+      workingdir: ${{ inputs.workingdir }}
+      workload_identity_provider: ${{ inputs.workload_identity_provider }}
+      service_account: ${{ inputs.service_account }}
+      sonar-args: ${{ inputs.sonar-args }}
+      environment: ${{ inputs.environment }}
+      image-name: ${{ inputs.image-name }}
+      playwright-cache: ${{ inputs.playwright-cache }}
+      gcs-bucket-name: ${{ inputs.gcs-bucket-name }}
+      gcs-reports-path: ${{ inputs.gcs-reports-path }}
+      gcp-base-url: ${{ inputs.gcp-base-url }}
+      docker-target-registry: ${{ inputs.gcp-base-url }}/${{ inputs.gcp-project-id }}/${{ inputs.gcp-gar-id }}
+      docker-buildargs: ${{ inputs.docker-buildargs }}
+      docker-sbom: ${{ inputs.docker-sbom }}
+      docker-provenance: ${{ inputs.docker-provenance }}
+      quick-fail: ${{ inputs.quick-fail }}
+      git-enable-tag: ${{ inputs.git-enable-tag }}
+      gh-release: ${{ inputs.gh-release }}
+    secrets:
+      git-admin-token: ${{ secrets.GHA_PERSONNAL_ADMIN_TOKEN }}
+      git-token: ${{ github.token }}
+      sonar-token: ${{ secrets.SONAR_TOKEN }}
+      fedid-login: ${{ secrets.PLAYWRIGHT_LOGIN }}
+      fedid-password: ${{ secrets.PLAYWRIGHT_PASSWORD }}
+      fedid-client-id: ${{ secrets.FEDID_CLIENT_ID }}
+      bff-key: ${{ secrets.BFF_KEY }}
+      snyk-token: ${{ secrets.SNYK_TOKEN }}
+      prisma-user: ${{ secrets.PRISMA_USER }}
+      prisma-pass: ${{ secrets.PRISMA_PASS }}
