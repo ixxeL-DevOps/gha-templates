@@ -81,7 +81,8 @@ runs:
         helm repo add ${{ inputs.repo-name }} ${{ inputs.repo-url }} --force-update=${{ inputs.force-update }} \
                                                         --insecure-skip-tls-verify=${{ inputs.skip-tls }} \
                                                         --username ${{ inputs.repo-username }} \
-                                                        --password ${{ inputs.repo-password }}
+                                                        --password ${{ inputs.repo-password }} \
+                                                        --pass-credentials
         if [[ $? = 0 ]]
         then
           echo -e "${GREEN}[ SUCCESS ] > Helm repo ${{ inputs.repo-name }} ${{ inputs.repo-url }} added successfully !${BLANK}"
@@ -105,7 +106,7 @@ runs:
           if [[ ${{ inputs.push-type }} = "chartmuseum" ]]
           then
             echo -e "${CYAN}[ INFO ] > Using helm-push chartmuseum plugin${BLANK}"
-            helm cm-push ${{ inputs.pkg-path }} ${{ inputs.repo-name }}
+            helm cm-push ${{ inputs.pkg-path }} ${{ inputs.repo-name }} --insecure
           elif [[ ${{ inputs.push-type }} = "jfrog" ]]
           then
             echo -e "${CYAN}[ INFO ] > Jfrog Artifactory token push method${BLANK}"
