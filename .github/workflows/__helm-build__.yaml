@@ -248,6 +248,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: "0"
+          token: ${{ secrets.git-admin-token }}
       - name: Helm linting
         id: helm-lint
         uses: ixxeL-DevOps/gha-templates/.github/actions/helm-lint@main
@@ -373,7 +374,7 @@ jobs:
         if: (inputs.auto-update-chart == 'true') && (inputs.release)
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
-          git-token: ${{ secrets.PAT }}
+          git-token: ${{ secrets.git-admin-token }}
           git-msg: ":package: CI release of helm chart ${{ env.COMPONENT_NAME }} version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.git-workdir }}
           git-staging-dir: ${{ inputs.workingdir }}
