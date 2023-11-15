@@ -237,7 +237,7 @@ jobs:
     runs-on: self-hosted
     # runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pages: write
       # id-token: write
     # container:
@@ -374,7 +374,7 @@ jobs:
         if: (inputs.auto-update-chart == 'true') && (inputs.release)
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
-          git-token: ${{ secrets.git-admin-token }}
+          git-token: ${{ secrets.PAT }}
           git-msg: ":package: CI release of helm chart ${{ env.COMPONENT_NAME }} version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.git-workdir }}
           git-staging-dir: ${{ inputs.workingdir }}
