@@ -76,44 +76,44 @@ jobs:
           token: ${{ secrets.git-token }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.workingdir }}
       - name: Get last tag
         id: get-last-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         with:
           git-workdir: ${{ inputs.workingdir }}
           branch: ${{ inputs.release-target-branch }}
       - name: Detect bump
         id: detect-bump
-        uses: ixxeL-DevOps/gha-templates/.github/actions/detect-bump@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/detect-bump@main
         with:
           release-regex: '\s*:package: CI release version ${{ steps.get-last-tag.outputs.LAST_TAG }}.+'
           minor-regex: ^(feat/.+)$
           major-regex: ^((((feat|fix|chore|docs|perf|refactor|build|ci|revert|style|test)!)|(!(feat|fix|chore|docs|perf|refactor|build|ci|revert|style|test)))/.+)$
       - name: Bump version
         id: bump-version
-        uses: ixxeL-DevOps/gha-templates/.github/actions/bump-version@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/bump-version@main
         with:
           increment: ${{ steps.detect-bump.outputs.BUMP_KIND }}
           current-version: ${{ steps.get-last-tag.outputs.LAST_TAG != '' && steps.get-last-tag.outputs.LAST_TAG || 'v1.0.0' }}
       - name: Substitute ref
         id: substitute-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
         with:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: ${{ steps.bump-version.outputs.VERSION }}
       - name: Update changelog
         id: changelog
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
           release-name: ${{ steps.bump-version.outputs.VERSION }}
       - name: Git push
         id: git-push
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
           git-msg: ":package: CI release version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
@@ -121,7 +121,7 @@ jobs:
           push-option: ${{ inputs.push-option }}
       - name: GH Release
         id: gh-release
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.bump-version.outputs.VERSION }}
           verify-tag: ${{ inputs.release-verify-tag }}
@@ -138,13 +138,13 @@ jobs:
           fi
       - name: Delete git tag
         id: git-tag-delete
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag-delete@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag-delete@main
         with:
           tag: ${{ steps.extract-major.outputs.BASE_VERSION }}
           git-workdir: ${{ inputs.workingdir }}
       - name: Git update base tag
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         with:
           tag-msg: "update tag semver [skip ci]"
           tag-value: ${{ steps.extract-major.outputs.BASE_VERSION }}
@@ -153,7 +153,7 @@ jobs:
           commit-sha: ${{ steps.git-push.outputs.GIT_PUSHED_COMMIT_SHA }}
       - name: Git revert to main
         id: git-revert
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@v1.4.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@main
         with:
           git-workdir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
