@@ -1,0 +1,163 @@
+---
+name: Automate tag
+on:
+  workflow_call:
+    secrets:
+      git-token:
+        required: true
+    inputs:
+      workingdir:
+        required: false
+        default: "./"
+        type: string
+      runs-on:
+        description: OS to run jobs on
+        required: false
+        default: ubuntu-latest
+        type: string
+      ci-image:
+        description: docker image to run pipeline on
+        required: false
+        default: ixxel/toolbox:base-latest
+        type: string
+      workflows-directory:
+        description: directory in which to find workflows
+        required: false
+        default: "./.github/workflows/*.yaml"
+        type: string
+      actions-source:
+        description: origin of actions
+        required: false
+        default: ixxeL-actions
+        type: string
+      new-ref:
+        required: false
+        type: string
+      git-workdir:
+        required: false
+        default: .
+        type: string
+      push-option:
+        required: false
+        default: ci.skip
+        type: string
+      update-base-tag:
+        required: false
+        default: true
+        type: boolean
+      release-verify-tag:
+        required: false
+        default: false
+        type: boolean
+      release-target-branch:
+        required: false
+        default: ${{ github.ref_name }}
+        type: string
+      increment:
+        required: false
+        default: fix
+        type: string
+jobs:
+  auto-tag-repo:
+    name: "\U0001F680 Release"
+    timeout-minutes: 5
+    runs-on: ${{ inputs.runs-on }}
+    # permissions:
+    #   contents: read
+    #   pages: write
+    #   id-token: write
+    container:
+      image: ${{ inputs.ci-image }}
+    steps:
+      - name: Clone code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+          token: ${{ secrets.git-token }}
+
+      - name: Git config
+        id: git-config
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        with:
+          git-workdir: ${{ inputs.workingdir }}
+
+      - name: Install svu
+        run: |
+          echo 'deb [trusted=yes] https://apt.fury.io/caarlos0/ /' | sudo tee /etc/apt/sources.list.d/caarlos0.list
+          sudo apt update
+          sudo apt install svu
+
+      - name: Detect bump
+        id: bump-version
+        run: |
+          VERSION=$(svu n)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Substitute ref
+        id: substitute-ref
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
+        with:
+          workflows-directory: ${{ inputs.workflows-directory }}
+          actions-source: ${{ inputs.actions-source }}
+          new-ref: ${{ steps.bump-version.outputs.VERSION }}
+
+      - name: Git push
+        id: git-push
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        with:
+          git-msg: ":package: CI release version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
+          git-workdir: ${{ inputs.workingdir }}
+          git-staging-dir: ${{ inputs.workingdir }}
+          push-option: ${{ inputs.push-option }}
+
+      - name: "\U0001F3F7️ Git tag"
+        id: git-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        with:
+          tag-msg: "CI auto Git tag"
+          tag-value: ${{ steps.bump-version.outputs.VERSION }}
+          commit-sha: ${{ github.sha }}
+          git-workdir: ${{ inputs.workingdir }}
+          push-option: ${{ inputs.push-option }}
+
+      - name: Run GoReleaser
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean --debug --timeout 60m
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract tags
+        id: extract-tags
+        run: |
+          major_version=$(echo "${{ steps.bump-version.outputs.VERSION }}" | awk -F. '{print $1}')
+          minor_version=$(echo "${{ steps.bump-version.outputs.VERSION }}" | awk -F. '{print $1"."$2}')
+          echo "MAJOR_TAG=$major_version" >> $GITHUB_OUTPUT
+          echo "MINOR_TAG=$minor_version" >> $GITHUB_OUTPUT
+
+      - name: Update stable tag to latest version
+        run: |
+          git tag -f ${{ steps.extract-tags.outputs.MAJOR_TAG }} ${{ github.ref_name }}
+          git tag -f ${{ steps.extract-tags.outputs.MINOR_TAG }} ${{ github.ref_name }}
+          git tag -f latest ${{ github.ref_name }}
+          git push -f origin --tags
+
+      - name: Restore ref
+        id: restore-ref
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
+        with:
+          workflows-directory: ${{ inputs.workflows-directory }}
+          actions-source: ${{ inputs.actions-source }}
+          new-ref: main
+
+      - name: Git push
+        id: git-push-final
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        with:
+          git-msg: ":recycle: Restore parameters from user ${GITHUB_ACTOR} [skip ci]"
+          git-workdir: ${{ inputs.workingdir }}
+          git-staging-dir: ${{ inputs.workingdir }}
+          push-option: ${{ inputs.push-option }}

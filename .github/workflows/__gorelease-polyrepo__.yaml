@@ -1,0 +1,165 @@
+##################################################
+# DO NOT CALL DIRECTLY THIS WORKFLOW ON PROJECTS #
+##################################################
+#
+# Define a tag, promote in GAR and git tag accordingly
+#
+---
+name: Release with Goreleaser for polyrepo
+on:
+  workflow_call:
+    secrets:
+      git-admin-token:
+        required: false
+      git-token:
+        required: false
+    inputs:
+      workingdir:
+        required: false
+        default: .
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+  packages: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install svu
+        if: startsWith(github.ref, 'refs/heads/')
+        run: |
+          echo 'deb [trusted=yes] https://apt.fury.io/caarlos0/ /' | sudo tee /etc/apt/sources.list.d/caarlos0.list
+          sudo apt update
+          sudo apt install svu
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: stable
+      - name: GoReleaser check
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          install-only: true
+      - id: snapshot
+        if: startsWith(github.ref, 'refs/heads/')
+        run: |
+          SNAPSHOT_VERSION=$(svu n)
+          echo "SNAPSHOT_VERSION=$SNAPSHOT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set GORELEASER_PREVIOUS_TAG # Workaround, GoReleaser uses 'git-describe' to determine a previous tag. Our tags are created in realease branches.
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -xue
+          if echo ${{ github.ref_name }} | grep -Ee '-rc[0-9\.]+$';then
+            echo "This is a release candidate"
+            echo "GORELEASER_PREVIOUS_TAG=$(git -c 'versionsort.suffix=-rc' tag --list --sort=version:refname | grep -E "v[0-9]*.[0-9]*.[0-9]*-rc[0-9]*" | tail -n 2 | head -n 1)" >> $GITHUB_ENV
+          else
+            echo "This is a final release"
+            echo "GORELEASER_PREVIOUS_TAG=$(git -c 'versionsort.suffix=-rc' tag --list --sort=version:refname | grep -E "v[0-9]*.[0-9]*.[0-9]*\$" | tail -n 2 | head -n 1)" >> $GITHUB_ENV
+          fi
+
+      - name: Run GoReleaser
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean --debug --timeout 60m
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run GoReleaser
+        if: startsWith(github.ref, 'refs/heads/')
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean --debug --timeout 60m --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SNAPSHOT_VERSION: ${{ steps.snapshot.outputs.SNAPSHOT_VERSION }}
+
+  post-release:
+    needs:
+      - goreleaser
+    permissions:
+      contents: write # Needed to push commit to update stable tag
+      pull-requests: write # Needed to create PR for VERSION update.
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Git config
+        id: git-config
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        with:
+          git-workdir: ${{ github.workspace }}
+
+      - name: Check if tag is the latest version and not a pre-release
+        id: check-tag
+        run: |
+          set -xue
+          # Fetch all tag information
+          git fetch --prune --tags --force
+
+          LATEST_TAG=$(git -c 'versionsort.suffix=-rc' tag --list --sort=version:refname | tail -n1)
+
+          PRE_RELEASE="false"
+          # Check if latest tag is a pre-release
+          if echo $LATEST_TAG | grep -Ee '-rc[0-9\.]+$';then
+            PRE_RELEASE="true"
+          fi
+
+          # Ensure latest tag matches github.ref_name & not a pre-release
+          if [[ $LATEST_TAG == ${{ github.ref_name }} ]] && [[ "$PRE_RELEASE" != 'true' ]];then
+            TAG_STABLE="true"
+          else
+            TAG_STABLE="false"
+          fi
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "TAG_STABLE=$TAG_STABLE" >> $GITHUB_OUTPUT
+
+      - name: Extract tags
+        if: ${{ steps.check-tag.outputs.TAG_STABLE == 'true' }}
+        id: extract-tags
+        run: |
+          major_version=$(echo "${{ steps.check-tag.outputs.LATEST_TAG }}" | awk -F. '{print $1}')
+          minor_version=$(echo "${{ steps.check-tag.outputs.LATEST_TAG }}" | awk -F. '{print $1"."$2}')
+          echo "MAJOR_TAG=$major_version" >> $GITHUB_OUTPUT
+          echo "MINOR_TAG=$minor_version" >> $GITHUB_OUTPUT
+
+      - name: Show extracted tags
+        if: ${{ steps.check-tag.outputs.TAG_STABLE == 'true' }}
+        run: |
+          echo "Major Version: ${{ steps.extract-tags.outputs.MAJOR_TAG }}"
+          echo "Minor Version: ${{ steps.extract-tags.outputs.MINOR_TAG }}"
+
+      - name: Update stable tag to latest version
+        if: ${{ steps.check-tag.outputs.TAG_STABLE == 'true' }}
+        run: |
+          git tag -f ${{ steps.extract-tags.outputs.MAJOR_TAG }} ${{ github.ref_name }}
+          git tag -f ${{ steps.extract-tags.outputs.MINOR_TAG }} ${{ github.ref_name }}
+          git tag -f latest ${{ github.ref_name }}
+          git push -f origin --tags
