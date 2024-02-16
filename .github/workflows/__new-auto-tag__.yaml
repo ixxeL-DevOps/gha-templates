@@ -119,6 +119,13 @@ jobs:
           commit-sha: ${{ github.sha }}
           git-workdir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
+
+      - name: Refresh code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+          token: ${{ secrets.git-token }}
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
