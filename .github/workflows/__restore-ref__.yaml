@@ -17,19 +17,19 @@ jobs:
           token: ${{ secrets.PAT }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v1.1.0
         with:
           git-workdir: .
       - name: Restore ref
         id: restore-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.1.0
         with:
           workflows-directory: ./.github/workflows/*.yaml
           actions-source: ixxeL-DevOps
           new-ref: ${{ github.ref_name }}
       - name: Git push
         id: git-push-final
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v1.1.0
         with:
           git-msg: ":recycle: Restore parameters from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: .
