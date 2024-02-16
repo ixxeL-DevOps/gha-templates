@@ -75,6 +75,11 @@ jobs:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
 
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: stable
+
       - name: Git config
         id: git-config
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
