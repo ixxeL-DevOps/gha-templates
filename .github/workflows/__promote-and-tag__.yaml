@@ -15,6 +15,10 @@ on:
       git-token:
         required: false
     inputs:
+      workingdir:
+        required: false
+        default: .
+        type: string
       # GCP auth
       workload_identity_provider:
         required: true
@@ -61,6 +65,20 @@ on:
         required: false
         default: ${{ github.ref_name }}
         type: string
+      tag-pattern:
+        description: tag pattern to look for
+        required: false
+        default: "false"
+        type: string
+      semver-enabled:
+        description: enable semantic versioning
+        required: false
+        default: "false"
+        type: string
+      bump-kind:
+        required: false
+        default: patch
+        type: string
       # Vault
       vault-enabled:
         required: false
@@ -68,7 +86,7 @@ on:
         type: boolean
       vault-url:
         required: false
-        default: https://vault.pp.dktapp.cloud
+        default: ""
         type: string
       vault-namespace:
         required: false
@@ -76,17 +94,16 @@ on:
         type: string
       vault-role:
         required: false
-        default: whbox-ga-role
+        default: ""
         type: string
       vault-secret-path:
         required: false
-        default: whbox-tools/data/gh-actions
+        default: secretengine/data/gh-actions
         type: string
-
 jobs:
   promote-and-release:
-    name: 🚀 Promote and Release
-    runs-on: [self-hosted, decathlon]
+    name: "\U0001F680 Promote and Release"
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       checks: write
@@ -100,29 +117,17 @@ jobs:
       img-digest: ${{ steps.get-img-info.outputs.IMG_DIGEST }}
       img-sha: ${{ steps.get-img-info.outputs.IMG_SHA }}
     steps:
-      - name: Get secrets
-        id: get-secrets
-        if: inputs.vault-enabled == true
-        uses: hashicorp/vault-action@v2
-        with:
-          url: ${{ inputs.vault-url }}
-          namespace: ${{ inputs.vault-namespace }}
-          method: jwt
-          role: ${{ inputs.vault-role }}
-          secrets: |
-            whbox-tools/data/gh-actions GHA_PERSONNAL_ADMIN_TOKEN | GHA_PERSONNAL_ADMIN_TOKEN
-      - name: Clone code with Vault
-        uses: actions/checkout@v4
-        if: inputs.vault-enabled == true
-        with:
-          fetch-depth: 0
-          token: ${{ steps.get-secrets.outputs.GHA_PERSONNAL_ADMIN_TOKEN }}
       - name: Clone code
         uses: actions/checkout@v4
         if: inputs.vault-enabled == false
         with:
           fetch-depth: 0
           token: ${{ secrets.git-admin-token }}
+      - name: GCloud GAR Authentication
+        id: gcloud-gar-auth
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
+        with:
+          registry: ${{ inputs.gcp-registry }}
       - name: Get img SHA
         id: get-img-info
         uses: ixxeL-DevOps/gha-templates/.github/actions/get-img-info@main
@@ -136,47 +141,125 @@ jobs:
           git-workdir: ${{ inputs.git-workdir }}
       - name: Get last tag
         id: get-last-tag
+        if: inputs.semver-enabled != 'true'
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         with:
-          git-workdir: ${{ inputs.git-workdir }}
+          git-workdir: ${{ inputs.workingdir }}
           branch: ${{ inputs.release-target-branch }}
-          pattern: "^${{ inputs.target-env }}*"
+          pattern: "^${{ inputs.target-env }}-*"
           starting-tag: ""
-      - name: 🏷️ Git tag
+      - name: Get last preprod tag
+        id: get-last-preprod-tag
+        if: inputs.semver-enabled == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        with:
+          git-workdir: ${{ inputs.workingdir }}
+          branch: ${{ inputs.release-target-branch }}
+          pattern: '^(v?[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+)$'
+          starting-tag: ""
+      - name: Get last prod tag
+        id: get-last-prod-tag
+        if: inputs.semver-enabled == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        with:
+          git-workdir: ${{ inputs.workingdir }}
+          branch: ${{ inputs.release-target-branch }}
+          pattern: '^(v?[0-9]+\.[0-9]+\.[0-9]+)$'
+          starting-tag: ""
+      - name: Bump version
+        id: bump-version
+        if: inputs.semver-enabled == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/pysemver@main
+        with:
+          bump-kind: ${{ inputs.bump-kind }}
+          last-preprod-tag: ${{ steps.get-last-preprod-tag.outputs.LAST_TAG }}
+          last-prod-tag: ${{ steps.get-last-prod-tag.outputs.LAST_TAG }}
+          current-version: ${{ steps.get-last-tag.outputs.LAST_TAG }}
+          target-env: ${{ inputs.target-env }}
+      - name: Define final tag
+        id: define-final-tag
+        run: |
+          if [[ "${{ inputs.semver-enabled }}" != 'true' ]]
+          then
+            FINAL_VERSION=${{ inputs.target-env }}-${{ github.run_number }}
+            LAST_VERSION=${{ steps.get-last-tag.outputs.LAST_TAG }}
+            if [[ "${{ inputs.target-env }}" == 'preprod' ]]
+            then
+              PRERELEASE=true
+            elif [[ "${{ inputs.target-env }}" == 'prod' ]]
+            then
+              PRERELEASE=false
+            fi
+          else
+            FINAL_VERSION=${{ steps.bump-version.outputs.VERSION }}
+            if [[ "${{ inputs.target-env }}" == 'preprod' ]]
+            then
+              LAST_VERSION=${{ steps.get-last-preprod-tag.outputs.LAST_TAG }}
+              PRERELEASE=true
+            elif [[ "${{ inputs.target-env }}" == 'prod' ]]
+            then
+              LAST_VERSION=${{ steps.get-last-prod-tag.outputs.LAST_TAG }}
+              PRERELEASE=false
+            fi
+          fi
+          echo "FINAL_VERSION=$FINAL_VERSION" >> $GITHUB_OUTPUT
+          echo "LAST_VERSION=$LAST_VERSION" >> $GITHUB_OUTPUT
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_OUTPUT
+      - name: "\U0001F3F7️ Git tag"
         id: git-tag
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         with:
           tag-msg: "CI auto Git tag for ${{ inputs.gcp-registry }}/${{ inputs.gcp-repository }}/${{ inputs.image-name }} deployment to ${{ inputs.target-env }} env"
-          tag-value: "${{ inputs.target-env }}-${{github.run_number}}"
+          tag-value: ${{ steps.define-final-tag.outputs.FINAL_VERSION }}
           commit-sha: ${{ steps.get-img-info.outputs.IMG_SHA }}
           git-workdir: ${{ inputs.git-workdir }}
           push-option: ${{ inputs.push-option }}
-      - name: 🚀 GH Release with Vault
+      - name: "\U0001F3F7️ Git tag preprod catch up"
+        id: git-tag-catch-up
+        if: steps.bump-version.outputs.PREPROD_CATCH_UP == 'true' && inputs.semver-enabled == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        with:
+          tag-msg: "CI auto Git tag for ${{ inputs.gcp-registry }}/${{ inputs.gcp-repository }}/${{ inputs.image-name }} deployment to ${{ inputs.target-env }} env"
+          tag-value: ${{ steps.define-final-tag.outputs.FINAL_VERSION }}-rc.1
+          commit-sha: ${{ steps.get-img-info.outputs.IMG_SHA }}
+          git-workdir: ${{ inputs.git-workdir }}
+          push-option: ${{ inputs.push-option }}
+      - name: "\U0001F680 GH Release with Vault"
         id: gh-release-vault
         if: inputs.vault-enabled && inputs.gh-release == 'true'
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
-          tag: "${{ inputs.target-env }}-${{github.run_number}}"
+          tag: ${{ steps.define-final-tag.outputs.FINAL_VERSION }}
           verify-tag: true
           target-branch: ${{ inputs.release-target-branch }}
-          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG }}
+          last-tag: ${{ steps.define-final-tag.outputs.LAST_VERSION }}
+          prerelease: ${{ steps.define-final-tag.outputs.PRERELEASE }}
         env:
           GH_TOKEN: ${{ steps.get-secrets.outputs.GHA_PERSONNAL_ADMIN_TOKEN }}
-      - name: 🚀 GH Release
+      - name: "\U0001F680 GH Release"
         id: gh-release
         if: inputs.vault-enabled == false && inputs.gh-release == 'true'
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
-          tag: "${{ inputs.target-env }}-${{github.run_number}}"
+          tag: ${{ steps.define-final-tag.outputs.FINAL_VERSION }}
           verify-tag: true
           target-branch: ${{ inputs.release-target-branch }}
-          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG }}
+          last-tag: ${{ steps.define-final-tag.outputs.LAST_VERSION }}
+          prerelease: ${{ steps.define-final-tag.outputs.PRERELEASE }}
         env:
           GH_TOKEN: ${{ secrets.git-admin-token }}
-      - name: 🏷️ GCloud add tag
+      - name: "\U0001F3F7️ GCloud add tag"
         id: gcloud-add-tag
         uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-add-tag@main
         with:
           image-fullname: ${{ inputs.gcp-registry }}/${{ inputs.gcp-repository }}/${{ inputs.image-name }}
           src-image-tag: ${{ inputs.original-tag }}
-          dst-image-tag: "${{ inputs.target-env }}-${{github.run_number}}"
+          dst-image-tag: ${{ steps.define-final-tag.outputs.FINAL_VERSION }}
+      - name: "\U0001F3F7️ GCloud add tag preprod catch up"
+        id: gcloud-add-tag-catch-up
+        if: steps.bump-version.outputs.PREPROD_CATCH_UP == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-add-tag@main
+        with:
+          image-fullname: ${{ inputs.gcp-registry }}/${{ inputs.gcp-repository }}/${{ inputs.image-name }}
+          src-image-tag: ${{ inputs.original-tag }}
+          dst-image-tag: ${{ steps.define-final-tag.outputs.FINAL_VERSION }}-rc.1

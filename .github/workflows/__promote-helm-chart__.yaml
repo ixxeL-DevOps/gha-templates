@@ -43,11 +43,11 @@ on:
       # helm pull
       helm-pull-repo-name:
         required: false
-        default: whbox-pp
+        default: pp
         type: string
       helm-pull-repo-url:
         required: false
-        default: https://whbox-chartmuseum.pp.dktapp.cloud
+        default: ""
         type: string
       helm-pull-repo-username:
         required: false
@@ -68,11 +68,11 @@ on:
       # helm push
       helm-push-repo-name:
         required: false
-        default: whbox-pr
+        default: pr
         type: string
       helm-push-repo-url:
         required: false
-        default: https://whbox-chartmuseum.dktapp.cloud
+        default: ""
         type: string
       helm-push-repo-username:
         required: false
@@ -89,7 +89,7 @@ on:
         type: boolean
       vault-url:
         required: false
-        default: https://vault.dktapp.cloud
+        default: ""
         type: string
       vault-namespace:
         required: false
@@ -97,13 +97,13 @@ on:
         type: string
       vault-role:
         required: false
-        default: whbox-ga-role
+        default: ""
         type: string
 jobs:
   promoting-helm-chart:
     name: promoting-helm-chart
     timeout-minutes: 8
-    runs-on: [self-hosted, decathlon]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       pages: write
@@ -114,24 +114,24 @@ jobs:
         if: inputs.vault-enabled == true
         uses: hashicorp/vault-action@v2
         with:
-          url: https://vault.pp.dktapp.cloud
+          url: ""
           namespace: ${{ inputs.vault-namespace }}
           method: jwt
           role: ${{ inputs.vault-role }}
           secrets: |
-            whbox-tools/data/chartmuseum/auth password | CHARTMUSEUM_PP_PASSWORD
+            secretengine/data/chartmuseum/auth password | CHARTMUSEUM_PP_PASSWORD
       - name: Get secrets from Vault Prod
         id: get-secrets-pr
         if: inputs.vault-enabled == true
         uses: hashicorp/vault-action@v2
         with:
-          url: https://vault.dktapp.cloud
+          url: ""
           namespace: ${{ inputs.vault-namespace }}
           method: jwt
           role: ${{ inputs.vault-role }}
           secrets: |
-            whbox-tools/data/gh-actions GHA_PERSONNAL_ADMIN_TOKEN | GHA_PERSONNAL_ADMIN_TOKEN ;
-            whbox-tools/data/chartmuseum/auth password | CHARTMUSEUM_PR_PASSWORD
+            secretengine/data/gh-actions GHA_PERSONNAL_ADMIN_TOKEN | GHA_PERSONNAL_ADMIN_TOKEN ;
+            secretengine/data/chartmuseum/auth password | CHARTMUSEUM_PR_PASSWORD
       - name: Helm pull
         id: helm-pull
         uses: ixxeL-DevOps/gha-templates/.github/actions/helm-pull@main

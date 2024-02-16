@@ -1,0 +1,70 @@
+---
+name: Find
+description: Finding test report
+author: ixxeL
+inputs:
+  workingdir:
+    description: Working directory
+    required: false
+    default: .
+  tests-directory:
+    description: directory where to find tests
+    required: false
+    default: .
+  max-depth:
+    description: find maxdepth param
+    required: false
+    default: "10"
+  search-type:
+    description: type of inode to search for
+    required: false
+    default: "f"
+  search-name:
+    description: name of inode to search for
+    required: false
+    default: "lcov.info"
+  destination:
+    description: name of the destination inode
+    required: false
+    default: "test"
+
+runs:
+  using: composite
+  steps:
+    - id: find-report
+      working-directory: ${{ inputs.workingdir }}
+      run: |
+        set -e
+        echo -e "${BLUE}[ STEP - Find report ] > Finding test reports${BLANK}"
+        echo -e "${YELLOW}[ EXECUTING ] > Searching for ${{ inputs.search-name }} in ${{ inputs.workingdir }}/${{ inputs.tests-directory }}${BLANK}"
+        mapfile -t items < <(find ${{ inputs.tests-directory }} -maxdepth ${{ inputs.max-depth }} -type ${{ inputs.search-type }} -name ${{ inputs.search-name }})
+        nb=${#items[@]}
+        if [[ "$nb" -gt 0 ]]
+        then
+          echo -e "${CYAN}[ INFO ] > $nb items found${BLANK}"
+          if [[ "$nb" -eq 1 ]]
+          then
+            echo -e "${CYAN}[ INFO ] > Found ${PURPLE}${items[0]}${CYAN} moving to ${PURPLE}${{ inputs.destination }}${BLANK}"
+            mv ${items[0]} ./${{ inputs.destination }}
+            exit 0
+          else
+            echo -e "${CYAN}[ INFO ] > Found multiple items${BLANK}"
+            for item in "${items[@]}"
+            do
+              echo -e "${CYAN}[ INFO ] > ${item} found${BLANK}"
+            done
+            exit 0
+          fi
+        else
+          echo -e "${CYAN}[ INFO ] > Nothing found${BLANK}"
+          exit 0
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

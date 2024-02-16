@@ -41,11 +41,16 @@ on:
         type: string
         default: "17"
         description: java version to be used
+      ignore-files-acceptance:
+        required: false
+        type: string
+        default: ""
+        description: ignore file for acceptance skip
       # Tests
       sonar-tu-only:
         required: false
         type: string
-        default: "false"
+        default: "true"
         description: enables sonar analysis for Unit tests only
       enable-acceptance-tests:
         required: false
@@ -90,7 +95,7 @@ on:
         type: string
       sonar-args:
         required: false
-        default: "-Dsonar.organization=toto -Dsonar.projectKey=test -Dsonar.exclusions=src/main/jooq/** -Dsonar.host.url=https://sonarcloud.io -Dsonar.coverage.jacoco.xmlReportPaths=./backend/build/reports/jacoco.xml"
+        default: "-Dsonar.organization=toto -Dsonar.projectKey=test -Dsonar.exclusions=src/main/jooq/** -Dsonar.host.url=https://sonarcloud.io -Dsonar.coverage.jacoco.xmlReportPaths=backend/build/reports/jacoco.xml"
         type: string
       # GCP auth
       workload_identity_provider:
@@ -126,11 +131,11 @@ on:
       gcp-project-id:
         required: false
         type: string
-        default: ""
+        default: test
       gcp-gar-id:
         required: false
         type: string
-        default: ""
+        default: docker-images
       docker-buildargs:
         required: false
         type: string
@@ -157,13 +162,14 @@ on:
         type: string
       vault-role:
         required: false
-        default: ""
+        default: github-tools
         type: string
       vault-secret-path:
         required: false
         default: secretengine/data/gh-actions
         type: string
 jobs:
+  # Static analysis tests phase
   static-analysis:
     name: "\U0001F50D Static analysis"
     timeout-minutes: 10
@@ -212,10 +218,11 @@ jobs:
           run-id: ${{ github.run_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.git-admin-token }}
+  # Unit tests phase
   unit-tests:
     if: inputs.enable-unit-tests == 'true'
     name: "\U0001F9EA Unit tests"
-    timeout-minutes: 20
+    timeout-minutes: 25
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     permissions:
@@ -268,8 +275,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload TU Jacoco report
-        uses: actions/upload-artifact@v3
         if: inputs.sonar-tu-only == 'false'
+        uses: actions/upload-artifact@v3
         with:
           name: jacoco-tu
           path: ${{ inputs.workingdir }}/jacoco-unit.xml
@@ -280,10 +287,11 @@ jobs:
           run-id: ${{ github.run_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.git-admin-token }}
-  acceptance-tests:
-    if: inputs.enable-acceptance-tests == 'true'
-    name: "\U0001F9EA Acceptance tests"
-    timeout-minutes: 20
+  # Integration tests phase
+  integration-tests:
+    if: inputs.enable-integration-tests == 'true'
+    name: "\U0001F9EA Integration tests"
+    timeout-minutes: 12
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     permissions:
@@ -296,7 +304,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          service_account: ${{ inputs.service_account }}
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
@@ -311,6 +318,229 @@ jobs:
         with:
           build-root-directory: ${{ inputs.workingdir }}
           cache-overwrite-existing: true
+      - name: Integration tests (Gradlew)
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          cmd: "integration"
+      - name: Jacoco code coverage (Gradlew)
+        if: inputs.sonar-tu-only == 'false'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          cmd: "jacocoTestReport"
+      - name: Find Jacoco report
+        if: inputs.sonar-tu-only == 'false'
+        id: prepare-lcov
+        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          search-name: jacoco.xml
+          destination: jacoco-integration.xml
+      - name: Upload TI Jacoco report
+        if: inputs.sonar-tu-only == 'false'
+        uses: actions/upload-artifact@v3
+        with:
+          name: jacoco-ti
+          path: ${{ inputs.workingdir }}/jacoco-integration.xml
+      - name: "\U0001F6AB Cancel workflow run"
+        if: failure() && inputs.quick-fail == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
+        with:
+          run-id: ${{ github.run_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.git-admin-token }}
+  # Compiling and docker image build phase
+  docker-build:
+    name: "\U0001F433 Build docker"
+    timeout-minutes: 12
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+      discussions: write
+      pull-requests: write
+    steps:
+      - name: "\U0001F4E5 Checkout code"
+        uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.java-version }}
+          java-package: "jdk"
+          distribution: "temurin"
+          check-latest: false
+          settings-path: ${{ github.workspace }}
+      - name: GCloud GAR Authentication
+        id: gcloud-gar-auth
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
+        with:
+          registry: ${{ inputs.gcp-base-url }}
+      - name: "\U0001F418 Setup Gradle"
+        if: inputs.setup-gradle == 'true'
+        uses: gradle/gradle-build-action@v2
+        with:
+          build-root-directory: ${{ inputs.workingdir }}
+          cache-overwrite-existing: true
+      - name: "\U0001F4E6 Build code (Gradlew)"
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          cmd: "clean bootJar"
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v7
+      - name: Define Tag
+        id: define-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@main
+        with:
+          current-branch: ${{ steps.branch-name.outputs.default_branch }}
+          repo-style: ${{ inputs.repo-style }}
+      - name: Delete previous PR img from GAR
+        id: gcloud-delete-img
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-delete-img@main
+        if: (steps.branch-name.outputs.is_default == 'false') && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
+        continue-on-error: true
+        with:
+          docker-img: ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:PR-${{ github.event.pull_request.number }}
+      # Triggered when the commit is made on a non-trunk branch with an opened/opening PR
+      - name: "\U0001F433 Build docker buildx [PR]"
+        uses: docker/build-push-action@v5
+        if: (steps.branch-name.outputs.is_default == 'false') && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
+        with:
+          context: ${{ inputs.workingdir }}
+          platforms: linux/amd64
+          push: true
+          sbom: ${{ inputs.docker-sbom }}
+          provenance: ${{ inputs.docker-provenance }}
+          build-args: |
+            ${{ inputs.docker-buildargs }}
+          tags: |
+            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:PR-${{ github.event.pull_request.number }}
+            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:sha-${{ github.sha }}
+      # Triggered when the commit is made on a non-trunk branch without an opened/opening PR
+      - name: "\U0001F433 Build docker buildx [SLB]"
+        uses: docker/build-push-action@v5
+        if: (steps.branch-name.outputs.is_default == 'false') && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') &&  github.event_name != 'pull_request'
+        with:
+          context: ${{ inputs.workingdir }}
+          platforms: linux/amd64
+          push: false
+          sbom: ${{ inputs.docker-sbom }}
+          provenance: ${{ inputs.docker-provenance }}
+          build-args: |
+            ${{ inputs.docker-buildargs }}
+          tags: |
+            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:${{ steps.define-tag.outputs.TARGET_TAG }}
+            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:sha-${{ github.sha }}
+            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:latest
+      # Triggered when the commit is made on the trunk
+      - name: "\U0001F433 Build docker buildx and push to GAR [Trunk]"
+        uses: docker/build-push-action@v5
+        if: (steps.branch-name.outputs.is_default == 'true') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        with:
+          context: ${{ inputs.workingdir }}
+          platforms: linux/amd64
+          push: true
+          sbom: ${{ inputs.docker-sbom }}
+          provenance: ${{ inputs.docker-provenance }}
+          build-args: |
+            ${{ inputs.docker-buildargs }}
+          tags: |
+            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:sha-${{ github.sha }}
+            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:latest
+      - name: "\U0001F6AB Cancel workflow run"
+        if: failure() && inputs.quick-fail == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
+        with:
+          run-id: ${{ github.run_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.git-admin-token }}
+  # calculate changes phase
+  calculate-changes:
+    if: inputs.enable-acceptance-tests == 'true'
+    name: "Calculate changes"
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+      discussions: write
+      pull-requests: write
+    outputs:
+      results: ${{ steps.changed-sources.outputs.any_modified }}
+    steps:
+      - name: "\U0001F4E5 Checkout code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get sources files changed
+        id: changed-sources
+        uses: tj-actions/changed-files@v42
+        with:
+          files: "**"
+          files_ignore: |
+            ${{ inputs.ignore-files-acceptance }}
+      - name: Acceptance test execution decision
+        id: check
+        run: |
+          echo "Execute test: ${{ steps.changed-sources.outputs.any_modified }}"
+
+  # Acceptance tests phase
+  acceptance-tests:
+    if: inputs.enable-acceptance-tests == 'true' && needs.calculate-changes.outputs.results == 'true'
+    name: "\U0001F9EA Acceptance tests"
+    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs: [docker-build, calculate-changes]
+    permissions:
+      id-token: write
+      contents: read
+      discussions: write
+      pull-requests: write
+    steps:
+      - name: verify
+        id: check
+        run: |
+          echo "RESULT: ${{ needs.calculate-changes.outputs.results }}"
+      - name: "\U0001F4E5 Checkout code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: ☁️ GCloud auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ inputs.workload_identity_provider }}
+          service_account: ${{ inputs.service_account }}
+      - name: Docker login to GAR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.gcp-base-url }}
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.java-version }}
+          java-package: "jdk"
+          distribution: "temurin"
+          check-latest: false
+          settings-path: ${{ github.workspace }}
+      - name: "\U0001F418 Setup Gradle"
+        if: inputs.setup-gradle == 'true'
+        uses: gradle/gradle-build-action@v2
+        with:
+          build-root-directory: ${{ inputs.workingdir }}
+          cache-overwrite-existing: true
+      - name: Pull image for TA
+        run: |
+          docker pull ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:sha-${{ github.sha }}
+          docker tag ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:sha-${{ github.sha }} ${{ inputs.image-name }}:latest
       - name: Acceptance tests (Gradlew)
         id: acceptance
         uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
@@ -386,177 +616,10 @@ jobs:
           run-id: ${{ github.run_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.git-admin-token }}
-  integration-tests:
-    if: inputs.enable-integration-tests == 'true'
-    name: "\U0001F9EA Integration tests"
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-    permissions:
-      id-token: write
-      contents: read
-      discussions: write
-      pull-requests: write
-    steps:
-      - name: "\U0001F4E5 Checkout code"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.java-version }}
-          java-package: "jdk"
-          distribution: "temurin"
-          check-latest: false
-          settings-path: ${{ github.workspace }}
-      - name: "\U0001F418 Setup Gradle"
-        if: inputs.setup-gradle == 'true'
-        uses: gradle/gradle-build-action@v2
-        with:
-          build-root-directory: ${{ inputs.workingdir }}
-          cache-overwrite-existing: true
-      - name: Integration tests (Gradlew)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
-        with:
-          workingdir: ${{ inputs.workingdir }}
-          cmd: "integration"
-      - name: Jacoco code coverage (Gradlew)
-        if: inputs.sonar-tu-only == 'false'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
-        with:
-          workingdir: ${{ inputs.workingdir }}
-          cmd: "jacocoTestReport"
-      - name: Find Jacoco report
-        if: inputs.sonar-tu-only == 'false'
-        id: prepare-lcov
-        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
-        with:
-          workingdir: ${{ inputs.workingdir }}
-          search-name: jacoco.xml
-          destination: jacoco-integration.xml
-      - name: Upload TI Jacoco report
-        if: inputs.sonar-tu-only == 'false'
-        uses: actions/upload-artifact@v3
-        with:
-          name: jacoco-ti
-          path: ${{ inputs.workingdir }}/jacoco-integration.xml
-      - name: "\U0001F6AB Cancel workflow run"
-        if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
-        with:
-          run-id: ${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.git-admin-token }}
-  docker-build:
-    name: "\U0001F433 Build docker"
-    timeout-minutes: 12
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-    permissions:
-      id-token: write
-      contents: read
-      discussions: write
-      pull-requests: write
-    steps:
-      - name: "\U0001F4E5 Checkout code"
-        uses: actions/checkout@v4
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.java-version }}
-          java-package: "jdk"
-          distribution: "temurin"
-          check-latest: false
-          settings-path: ${{ github.workspace }}
-      - name: ☁️ GCloud auth
-        id: auth
-        uses: actions/gcloud_workload_identity@main
-        with:
-          workload_identity_provider: ${{ inputs.workload_identity_provider }}
-          service_account: ${{ inputs.service_account }}
-      - name: GCloud GAR Authentication
-        id: gcloud-gar-auth
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
-        with:
-          registry: ${{ inputs.gcp-base-url }}
-      - name: "\U0001F418 Setup Gradle"
-        if: inputs.setup-gradle == 'true'
-        uses: gradle/gradle-build-action@v2
-        with:
-          build-root-directory: ${{ inputs.workingdir }}
-          cache-overwrite-existing: true
-      - name: "\U0001F4E6 Build code (Gradlew)"
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
-        with:
-          workingdir: ${{ inputs.workingdir }}
-          cmd: "clean bootJar"
-      - name: Get branch name
-        id: branch-name
-        uses: tj-actions/branch-names@v7
-      - name: Define Tag
-        id: define-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@main
-        with:
-          current-branch: ${{ steps.branch-name.outputs.default_branch }}
-          repo-style: ${{ inputs.repo-style }}
-      # Triggered when the commit is made on a non-trunk branch with an opened/opening PR
-      - name: "\U0001F433 Build docker buildx [PR]"
-        uses: docker/build-push-action@v5
-        if: (steps.branch-name.outputs.is_default == 'false') && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
-        with:
-          context: ${{ inputs.workingdir }}
-          platforms: linux/amd64
-          push: false
-          load: true
-          sbom: ${{ inputs.docker-sbom }}
-          provenance: ${{ inputs.docker-provenance }}
-          build-args: |
-            ${{ inputs.docker-buildargs }}
-          tags: |
-            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:PR-${{ github.event.pull_request.number }}
-            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:latest
-      # Triggered when the commit is made on a non-trunk branch without an opened/opening PR
-      - name: "\U0001F433 Build docker buildx [SLB]"
-        uses: docker/build-push-action@v5
-        if: (steps.branch-name.outputs.is_default == 'false') && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') &&  github.event_name != 'pull_request'
-        with:
-          context: ${{ inputs.workingdir }}
-          platforms: linux/amd64
-          push: false
-          load: true
-          sbom: ${{ inputs.docker-sbom }}
-          provenance: ${{ inputs.docker-provenance }}
-          build-args: |
-            ${{ inputs.docker-buildargs }}
-          tags: |
-            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:${{ steps.define-tag.outputs.TARGET_TAG }}
-            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:latest
-      # Triggered when the commit is made on the trunk
-      - name: "\U0001F433 Build docker buildx and push to GAR [Trunk]"
-        uses: docker/build-push-action@v5
-        if: (steps.branch-name.outputs.is_default == 'true') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        with:
-          context: ${{ inputs.workingdir }}
-          platforms: linux/amd64
-          push: true
-          sbom: ${{ inputs.docker-sbom }}
-          provenance: ${{ inputs.docker-provenance }}
-          build-args: |
-            ${{ inputs.docker-buildargs }}
-          tags: |
-            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:sha-${{ github.sha }}
-            ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:latest
-      - name: "\U0001F6AB Cancel workflow run"
-        if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
-        with:
-          run-id: ${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.git-admin-token }}
+  # Sonarqube analysis phase
   Sonar-analysis:
     name: "\U0001F300 Sonar Analysis"
-    timeout-minutes: 15
+    timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     needs: [unit-tests, acceptance-tests, integration-tests]
@@ -591,7 +654,7 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
-          cmd: "sonarqube -Dsonar.token=${{ secrets.sonar-token }} -Dsonar.scm.revision=${{ github.ref }} -Dsonar.coverage.jacoco.xmlReportPaths=build/jacoco/**/*.xml"
+          cmd: "sonarqube -Dsonar.token=${{ secrets.sonar-token }} -Dsonar.scm.revision=${{ github.ref }} -Dsonar.coverage.jacoco.xmlReportPaths=build/jacoco/**/*.xml -Dsonar.gradle.skipCompile=false"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   Release-docker:
@@ -725,35 +788,3 @@ jobs:
           target-branch: ${{ steps.branch-name.outputs.current_branch }}
         env:
           GH_TOKEN: ${{ secrets.git-admin-token }}
-  Rollback:
-    name: ♻️ Cleaning failed images
-    timeout-minutes: 6
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-    needs:
-      [
-        static-analysis,
-        unit-tests,
-        acceptance-tests,
-        integration-tests,
-        docker-build,
-      ]
-    permissions:
-      id-token: write
-      contents: read
-      discussions: write
-      pull-requests: write
-    if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request'
-    steps:
-      - name: "\U0001F4E5 Checkout code"
-        uses: actions/checkout@v4
-      - name: GCloud GAR Authentication
-        id: gcloud-gar-auth
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
-        with:
-          registry: ${{ inputs.gcp-base-url }}
-      - name: Delete image from GAR
-        id: gcloud-delete-img
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-delete-img@main
-        with:
-          docker-img: ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:sha-${{ github.sha }}

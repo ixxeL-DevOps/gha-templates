@@ -3,6 +3,10 @@ name: Playwright setup
 description: setup Playwright
 author: ixxeL
 inputs:
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
   cache:
     description: use cache or not
     required: false
@@ -25,14 +29,17 @@ runs:
       if: (steps.playwright-setup-cache.outputs.cache-hit != 'true') && (inputs.cache == 'true')
       shell: bash
       id: install-playwright-cache
-      run: pnpm playwright install --with-deps
+      working-directory: ${{ inputs.workingdir }}
+      run: pnpm exec playwright install --with-deps
     - name: Install Playwright Browsers deps only
       if: (steps.playwright-setup-cache.outputs.cache-hit != 'true') && (inputs.cache == 'true')
       shell: bash
       id: install-playwright-deps-cache
-      run: pnpm playwright install-deps
+      working-directory: ${{ inputs.workingdir }}
+      run: pnpm exec playwright install-deps
     - name: Install Playwright Browsers
       if: inputs.cache == 'false'
       shell: bash
       id: install-playwright
-      run: pnpm playwright install --with-deps
+      working-directory: ${{ inputs.workingdir }}
+      run: pnpm exec playwright install --with-deps

@@ -71,6 +71,7 @@ runs:
         CYAN: \033[1;36m
         BLANK: \033[0m
     - id: helm-push
+      shell: bash
       run: |
         set +e
         echo -e "${BLUE}[ STEP - Helm-chart Pushing ] > Pushing Helm chart.${BLANK}"
@@ -79,10 +80,9 @@ runs:
 
         echo -e "${YELLOW}[ EXECUTING ] > Adding helm repository ${{ inputs.repo-name }} ${{ inputs.repo-url }}.${BLANK}"
         helm repo add ${{ inputs.repo-name }} ${{ inputs.repo-url }} --force-update=${{ inputs.force-update }} \
-                                                        --insecure-skip-tls-verify=${{ inputs.skip-tls }} \
-                                                        --username ${{ inputs.repo-username }} \
-                                                        --password ${{ inputs.repo-password }} \
-                                                        --pass-credentials
+                                                                     --username="${{ inputs.repo-username }}" \
+                                                                     --password="${{ inputs.repo-password }}" \
+                                                                     --insecure-skip-tls-verify=${{ inputs.skip-tls }}
         if [[ $? = 0 ]]
         then
           echo -e "${GREEN}[ SUCCESS ] > Helm repo ${{ inputs.repo-name }} ${{ inputs.repo-url }} added successfully !${BLANK}"
@@ -106,7 +106,7 @@ runs:
           if [[ ${{ inputs.push-type }} = "chartmuseum" ]]
           then
             echo -e "${CYAN}[ INFO ] > Using helm-push chartmuseum plugin${BLANK}"
-            helm cm-push ${{ inputs.pkg-path }} ${{ inputs.repo-name }} --insecure
+            helm cm-push ${{ inputs.pkg-path }} ${{ inputs.repo-name }}
           elif [[ ${{ inputs.push-type }} = "jfrog" ]]
           then
             echo -e "${CYAN}[ INFO ] > Jfrog Artifactory token push method${BLANK}"
@@ -136,7 +136,6 @@ runs:
           echo -e "${RED}[ ERROR ] > Helm push didn't succeed !${BLANK}"
           exit 1
         fi
-      shell: bash
       env:
         RED: \033[1;31m
         GREEN: \033[1;32m

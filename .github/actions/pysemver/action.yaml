@@ -1,0 +1,190 @@
+---
+name: Python semver bump version
+description: Bumping semver version
+author: ixxeL
+inputs:
+  prepare:
+    description: Prepare the job when not running in adequate environment
+    required: false
+    default: "true"
+  update:
+    description: update the version
+    required: false
+    default: "true"
+  bump-kind:
+    description: type of increment
+    required: false
+    default: patch
+  last-preprod-tag:
+    description: last tag on preprod (usually release candidate tag)
+    required: false
+  last-prod-tag:
+    description: last tag on prod (usually semver tag)
+    required: false
+  current-version:
+    description: current version to update
+    required: false
+  component:
+    description: component name
+    required: false
+  target-env:
+    description: target environment for the tag
+    required: false
+    default: prod
+
+outputs:
+  VERSION:
+    description: version bumped
+    value: ${{ steps.bump-version.outputs.VERSION }}
+  PREPROD_CATCH_UP:
+    description: weither or not to catch up preprod tagging
+    value: ${{ steps.bump-version.outputs.PREPROD_CATCH_UP }}
+
+runs:
+  using: composite
+  steps:
+    - id: prepare
+      if: ${{ inputs.prepare == 'true' }}
+      run: |
+        set +e
+        pip3 install --upgrade semver
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ SUCCESS ] > Python semver installed successfully${BLANK}"
+        else
+          echo -e "${RED}[ ERROR ] > Python semver failed to install${BLANK}"
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m
+    - id: bump-version
+      run: |
+        set +e
+
+        version_compare() {
+          local v1
+          local v2
+          v1=$(echo "$(echo "$1" | sed 's/-rc.*$//')" | sed 's/v//')
+          v2=$(echo "$(echo "$2" | sed 's/-rc.*$//')" | sed 's/v//')
+          if [[ "$v1" == "$v2" ]]; then
+            echo "equal"
+          elif [[ "$v1" < "$v2" ]]; then
+            echo "smaller"
+          else
+            echo "greater"
+          fi
+        }
+
+        bump_version() {
+          local version=$1
+          local bump_kind=$2
+          result=$(pysemver bump $bump_kind $version)
+          echo $result
+        }
+
+        echo -e "${BLUE}[ STEP - Bump version ] > Auto bumping version${BLANK}"
+        if [[ ${{ inputs.update }} = true ]]
+        then
+          if [[ "${{ inputs.target-env }}" == "prod" ]]
+          then
+            echo -e "${CYAN}[ INFO ] > Target-env detected to ${PURPLE}${{ inputs.target-env }}${BLANK}"
+            VERSION="${{ inputs.last-prod-tag }}"
+          elif [[ "${{ inputs.target-env }}" == "preprod" ]]
+          then
+            echo -e "${CYAN}[ INFO ] > Target-env detected to ${PURPLE}${{ inputs.target-env }}${BLANK}"
+            VERSION="${{ inputs.last-preprod-tag }}"
+          else
+            echo -e "${CYAN}[ INFO ] > No specific target env${BLANK}"
+            VERSION="${{ inputs.current-version }}"
+          fi
+
+          echo -e "${YELLOW}[ EXECUTING ] > Version auto update has been triggered for version [ ${PURPLE}${VERSION}${YELLOW} ] and increment type ${PURPLE}${{ inputs.bump-kind }}${BLANK}"
+          if [[ -n "${{ inputs.component }}" ]]
+          then
+            echo -e "${CYAN}[ INFO ] > component ${{ inputs.component }} detected${BLANK}"
+            VERSION=$(echo "$VERSION" | sed 's/${{ inputs.component }}-//g')
+            echo -e "${CYAN}[ INFO ] > evaluated version is ${VERSION}${BLANK}"
+          fi
+          if [[ ${VERSION} == v* ]]; then
+            has_v=true
+            VERSION=$(echo "$VERSION" | sed 's/v//g')
+            echo -e "${CYAN}[ INFO ] > v prefix detected${BLANK}"
+          else
+            has_v=false
+          fi
+          if [[ ${VERSION} == "" ]]
+          then
+            echo -e "${CYAN}[ INFO ] > No input tag supplied. Starting new tag lifecycle${BLANK}"
+            echo -e "${CYAN}[ INFO ] > Target environment is ${{ inputs.target-env }}${BLANK}"
+            if [[ "${{ inputs.target-env }}" == "preprod" ]]
+            then
+              NEW_VERSION="v0.1.0-rc.1"
+            elif [[ "${{ inputs.target-env }}" == "prod" ]]
+            then
+              NEW_VERSION="v0.1.0"
+              PREPROD_CATCH_UP='true'
+            else
+              NEW_VERSION="v0.1.0"
+            fi
+            if [[ -n "${{ inputs.component }}" ]]
+            then
+              NEW_VERSION="${{ inputs.component }}-${NEW_VERSION}"
+            fi
+            echo -e "${CYAN}[ INFO ] > The new version will be --> [[ ${YELLOW}${NEW_VERSION}${CYAN} ]]${BLANK}"
+          else
+            if [ "${{ inputs.target-env }}" == "prod" ]; then
+              echo -e "${CYAN}[ INFO ] > Comparing prod tag ${PURPLE}${{ inputs.last-prod-tag }}${CYAN} to preprod tag ${PURPLE}${{ inputs.last-preprod-tag }}${BLANK}"
+              comparison_result=$(version_compare "${VERSION}" "${{ inputs.last-preprod-tag }}")
+              echo -e "${CYAN}[ INFO ] > ${{ inputs.target-env }} tag is ${PURPLE}${comparison_result}${BLANK}"
+
+              case $comparison_result in
+                "smaller") NEW_VERSION="$(echo "${{ inputs.last-preprod-tag }}" | sed 's/-rc.*$//')";;
+                "equal") NEW_VERSION=$(bump_version "${VERSION}" "${{ inputs.bump-kind }}");PREPROD_CATCH_UP='true';;
+                "greater") echo -e "${RED}[ ERROR ] > Error occured. Prod tag cannot be greater than preprod.${BLANK}";exit 1;;
+              esac
+            elif [ "${{ inputs.target-env }}" == "preprod" ]; then
+              echo -e "${CYAN}[ INFO ] > Comparing preprod tag ${PURPLE}${{ inputs.last-preprod-tag }}${CYAN} to prod tag ${PURPLE}${{ inputs.last-prod-tag }}${BLANK}"
+              comparison_result=$(version_compare "${VERSION}" "${{ inputs.last-prod-tag }}")
+              echo -e "${CYAN}[ INFO ] > ${{ inputs.target-env }} tag is ${PURPLE}${comparison_result}${BLANK}"
+
+              case $comparison_result in
+                "greater") NEW_VERSION=$(bump_version "${VERSION}" "prerelease");;
+                "equal") NEW_VERSION=$(bump_version "$(bump_version "${VERSION}" "${{ inputs.bump-kind }}")" "prerelease");;
+                "smaller") echo -e "${RED}[ ERROR ] > Error occured. Preprod tag cannot be smaller than prod.${BLANK}";exit 1;;
+              esac
+            else
+              NEW_VERSION=$(bump_version "${VERSION}" "${{ inputs.bump-kind }}")
+            fi
+
+            if [[ "$has_v" == true ]]; then
+              if [[ ${NEW_VERSION} != v* ]]; then
+                NEW_VERSION="v${NEW_VERSION}"
+              fi
+            fi
+            if [[ -n "${{ inputs.component }}" ]]
+            then
+              NEW_VERSION="${{ inputs.component }}-${NEW_VERSION}"
+            fi
+            echo -e "${CYAN}[ INFO ] > The new version will be --> [[ ${YELLOW}${NEW_VERSION}${CYAN} ]]${BLANK}"
+          fi
+        else
+          echo -e "${YELLOW}[ EXECUTING ] > Version will remain the same --> ${PURPLE}${{ inputs.current-version }}${BLANK}"
+          NEW_VERSION=${{ inputs.current-version }}
+        fi
+        echo "VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "PREPROD_CATCH_UP=$PREPROD_CATCH_UP" >> $GITHUB_OUTPUT
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

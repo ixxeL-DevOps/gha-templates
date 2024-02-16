@@ -13,7 +13,7 @@ inputs:
     description: pattern of the tag to look for
   starting-tag:
     required: false
-    default: ""
+    default: "v0.1.0"
     description: default strating tag
   branch:
     required: false
@@ -49,7 +49,7 @@ runs:
         echo -e "${CYAN}[ INFO ] > display ref tags${BLANK}"
         git show-ref --tags
 
-        echo -e "${YELLOW}[ EXECUTING ] > Getting last tag from pattern ${PURPLE}${{ inputs.pattern }}${BLANK}"
+        echo -e "${YELLOW}[ EXECUTING ] > Getting last tag from pattern ${PURPLE}[ ${{ inputs.pattern }} ]${BLANK}"
         # LAST_TAG=$(git -C ${{ inputs.git-workdir }} describe --tags --match ${{ inputs.pattern }} --abbrev=0)
 
         LAST_TAG=$(git tag --merged ${{ inputs.branch }} | grep -E "${{ inputs.pattern }}" | sort -rV | head -1)

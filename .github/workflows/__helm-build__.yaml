@@ -217,7 +217,7 @@ on:
         type: boolean
       vault-url:
         required: false
-        default: https://vault.pp.dktapp.cloud
+        default: ""
         type: string
       vault-namespace:
         required: false
@@ -225,7 +225,7 @@ on:
         type: string
       vault-role:
         required: false
-        default: whbox-ga-role
+        default: ""
         type: string
 
 env:

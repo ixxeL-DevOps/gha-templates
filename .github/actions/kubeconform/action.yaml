@@ -1,0 +1,94 @@
+---
+name: kubeconform
+description: Checking manifest compliance
+author: ixxeL
+inputs:
+  prepare:
+    description: Prepare the job when not running in adequate environment
+    required: false
+    default: "true"
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  target:
+    description: directory or file to analyze
+    required: false
+    default: .
+  schema-location:
+    description: where to find CRD schemas
+    required: false
+    default: https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+
+runs:
+  using: composite
+  steps:
+    - id: prepare
+      if: ${{ inputs.prepare == 'true' }}
+      run: |
+        set +e
+        VERSION=$(curl -fsSL https://github.com/yannh/kubeconform/releases/latest | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | sort | uniq | tail -1)
+        wget -q https://github.com/yannh/kubeconform/releases/download/${VERSION}/kubeconform-linux-amd64.tar.gz
+        tar -xzvf kubeconform-linux-amd64.tar.gz
+        sudo mv kubeconform /usr/local/bin
+        kubeconform -v
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ SUCCESS ] > Kubeconform properly installed${BLANK}"
+        else
+          echo -e "${RED}[ ERROR ] > Kubeconform failed to install${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m
+    - id: kubeconform
+      run: |
+        set +e
+        echo -e "${BLUE}[ STEP - Kubeconform ] > Kubeconform analyzis${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Kubeconform version.${BLANK}"
+        kubeconform -v
+        if [[ -d ${{ inputs.target }} ]]
+        then
+          echo -e "${YELLOW}[ EXECUTING ] > Kubeconform on directory ${{ inputs.target }}${BLANK}"
+          kubeconform -verbose \
+                      -summary \
+                      -ignore-missing-schemas \
+                      -schema-location default \
+                      -schema-location ${{ inputs.schema-location }} \
+                      ${{ inputs.target }}
+        elif [[ -f ${{ inputs.target }} ]]
+        then
+          echo -e "${YELLOW}[ EXECUTING ] > Kubeconform on file ${{ inputs.target }}${BLANK}"
+          kubeconform -verbose \
+                      -summary \
+                      -ignore-missing-schemas \
+                      -schema-location default \
+                      -schema-location ${{ inputs.schema-location }} \
+                      ${{ inputs.target }}
+        else
+          echo -e "${PURPLE}[ ERROR ] > Target ${{ inputs.target }} is neither a file or a directory${BLANK}"
+        fi
+        if [[ $? = 0 ]]
+        then
+          echo -e "${GREEN}[ CHECK SUCCESS ] > Kubeconform succeeded without any error.${BLANK}"
+          exit 0
+        else
+          echo -e "${PURPLE}[ CHECK ERROR ] > Kubeconform didn't succeed, please review your manifest(s)${BLANK}"
+          exit 1
+        fi
+      shell: bash
+      env:
+        RED: \033[1;31m
+        GREEN: \033[1;32m
+        YELLOW: \033[1;33m
+        BLUE: \033[1;34m
+        PURPLE: \033[1;35m
+        CYAN: \033[1;36m
+        BLANK: \033[0m

@@ -1,0 +1,292 @@
+---
+name: Check FluxCD HelmRelease update
+on:
+  workflow_call:
+    secrets:
+      git-token:
+        required: false
+    inputs:
+      workingdir:
+        required: false
+        default: ./
+        type: string
+      hr-path:
+        required: false
+        default: helmrelease.yml
+        type: string
+      # Helm
+      helm-prod-url:
+        required: false
+        default: ""
+        type: string
+      helm-pp-url:
+        required: false
+        default: ""
+        type: string
+      # Vault
+      vault-enabled:
+        required: false
+        default: true
+        type: boolean
+      vault-prod-url:
+        required: false
+        default: ""
+        type: string
+      vault-pp-url:
+        required: false
+        default: ""
+        type: string
+      vault-namespace:
+        required: false
+        default: inix
+        type: string
+      vault-role:
+        required: false
+        default: ""
+        type: string
+      vault-secret-path:
+        required: false
+        default: secretengine/data/kubeconfig/europe
+        type: string
+      # Kyverno
+      kyverno-policies-dir:
+        required: false
+        type: string
+        default: .github/kyverno-rules
+jobs:
+  check-hr-update:
+    name: check-hr-update
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      discussions: write
+      pull-requests: write
+    steps:
+      - name: Clone code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+      # - name: Fetch modified file
+      #   id: get-modified-files
+      #   uses: ixxeL-DevOps/gha-templates/.github/actions/get-pr-modified-files@main
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+        with:
+          files: env/**/*.{yml,yaml}
+          base_sha: ${{ github.base_ref }}
+      - name: List all changed files
+        run: |
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            echo "$file was changed"
+          done
+      - name: Detect HelmRelease modification
+        id: find-hr
+        run: |
+          RED="\033[1;31m"
+          GREEN="\033[1;32m"
+          YELLOW="\033[1;33m"
+          BLUE="\033[1;34m"
+          PURPLE="\033[1;35m"
+          CYAN="\033[1;36m"
+          BLANK="\033[0m"
+          set +e
+          REGEX="(helmrelease\.yml|helmrelease\.yaml|helmrelease-.*\.yml|helmrelease-.*\.yaml)$"
+          declare -a hr
+          arr="${{ steps.changed-files.outputs.all_changed_files }}"
+          IFS=' ' read -ra files_array <<< "$arr"
+          for file in "${files_array[@]}"
+          do
+            if [[ "$file" =~ $REGEX ]]; then
+              echo -e "${CYAN}[ INFO ] > Changed helmrelease detected ${YELLOW}${file}${BLANK}"
+              hr+=("$file")
+            fi
+          done
+          if [ ${#hr[@]} -gt 0 ] && [ ${#hr[@]} -lt 2 ]; then
+            echo -e "${CYAN}[ INFO ] > Helmrelease file is ${PURPLE}${hr[0]}${BLANK}"
+            echo "HR=${hr[0]}" >> $GITHUB_OUTPUT
+            exit 0
+          elif [ ${#hr[@]} -gt 1 ] ; then
+            echo -e "${RED}[ WARNING ] > Multiple Helmrelease file have changed. Please consider modifying 1 file at a time. Rendering on the first file only.${BLANK}"
+            echo -e "${CYAN}[ INFO ] > Helmrelease file is ${PURPLE}${hr[0]}${BLANK}"
+            echo "HR=${hr[0]}" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo -e "${RED}[ ERROR ] > Error, Helmrelease file not found${BLANK}"
+            exit 1
+          fi
+      - name: Calculate Vault path
+        id: calculate-vault-path
+        run: |
+          set +e
+          RED="\033[1;31m"
+          GREEN="\033[1;32m"
+          YELLOW="\033[1;33m"
+          BLUE="\033[1;34m"
+          PURPLE="\033[1;35m"
+          CYAN="\033[1;36m"
+          BLANK="\033[0m"
+          areas=("eu:europe" "as:asie" "am:america")
+          AREA=$(echo "${{ steps.find-hr.outputs.HR }}" | awk -F'/' -v nb="3" '{print $nb}')
+          ENV=$(echo "${{ steps.find-hr.outputs.HR }}" | awk -F'/' -v nb="2" '{print $nb}')
+          if [[ "$ENV" == 'dev' ]]
+          then
+            MODULE="$(echo "${{ steps.find-hr.outputs.HR }}" | awk -F'/' -v nb="4" '{print $nb}')-qual"
+          else
+            MODULE="$(echo "${{ steps.find-hr.outputs.HR }}" | awk -F'/' -v nb="4" '{print $nb}')"
+          fi
+          for area in "${areas[@]}"
+          do
+            k=${area%%:*}
+            v=${area#*:}
+            if [ "$AREA" == "$k" ]; then
+              echo "$AREA is $v"
+              AREA=$v
+            fi
+          done
+          VAULT_PATH="${MODULE}/data/kubeconfig/${AREA}"
+          if [[ "$ENV" == 'prod' ]]
+          then
+            VAULT_URL=${{ inputs.vault-prod-url }}
+            HELMREPO_URL=${{ inputs.helm-prod-url }}
+          else
+            VAULT_URL=${{ inputs.vault-pp-url }}
+            HELMREPO_URL=${{ inputs.helm-pp-url }}
+          fi
+          echo -e "${CYAN}[ INFO ] > Env is ${YELLOW}${ENV}${CYAN} for area ${YELLOW}${AREA}${CYAN} and module ${YELLOW}${MODULE}${CYAN} fetching Vault server ${YELLOW}${VAULT_URL}${CYAN} and vault path ${YELLOW}${VAULT_PATH}${BLANK}"
+          echo "AREA=$AREA" >> $GITHUB_OUTPUT
+          echo "ENV=$ENV" >> $GITHUB_OUTPUT
+          echo "MODULE=$MODULE" >> $GITHUB_OUTPUT
+          echo "VAULT_PATH=$VAULT_PATH" >> $GITHUB_OUTPUT
+          echo "VAULT_URL=$VAULT_URL" >> $GITHUB_OUTPUT
+          echo "HELMREPO_URL=$HELMREPO_URL" >> $GITHUB_OUTPUT
+      - name: Fetch Kubeconfig file from Vault
+        id: get-kubeconfig
+        if: inputs.vault-enabled == true
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ steps.calculate-vault-path.outputs.VAULT_URL }}
+          namespace: ${{ inputs.vault-namespace }}
+          method: jwt
+          path: github
+          role: ${{ inputs.vault-role }}
+          secrets: |
+            ${{ steps.calculate-vault-path.outputs.VAULT_PATH }} kubeconfig-b64 | KUBECFG ;
+      - name: Set kubeconfig
+        id: set-kubeconfig
+        uses: ixxeL-DevOps/gha-templates/.github/actions/set-kubeconfig@main
+        with:
+          kubeconfig-b64: ${{ steps.get-kubeconfig.outputs.KUBECFG }}
+      - name: Getting HelmRelease info
+        id: get-hr-info
+        uses: ixxeL-DevOps/gha-templates/.github/actions/get-flux-hr-info@main
+        with:
+          hr-file-path: ${{ steps.find-hr.outputs.HR }}
+      - name: Getting Helm deployment info
+        id: get-helm-info
+        uses: ixxeL-DevOps/gha-templates/.github/actions/get-helm-info@main
+        with:
+          helm-release: ${{ steps.get-hr-info.outputs.RELEASE }}
+          namespace: ${{ steps.set-kubeconfig.outputs.NAMESPACE }}
+      - name: Helm template current Release
+        id: helm-tpl-current
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@main
+        with:
+          add-repo: true
+          stdout-mode: true
+          repo-url: ${{ steps.calculate-vault-path.outputs.HELMREPO_URL }}
+          chart-name: ${{ steps.get-helm-info.outputs.CHART_NAME }}
+          chart-version: ${{ steps.get-helm-info.outputs.CHART_VERSION }}
+          output-file: current-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.get-helm-info.outputs.CHART_VERSION }}.yaml
+          values-file: ./current-values.yaml
+      - name: Set chart version for update release templating
+        id: set-target-version
+        run: |
+          if [[ "${{ steps.get-hr-info.outputs.IS_STATIC }}" == 'true' ]]
+          then
+            echo "HelmRelease is set on static version ${{ steps.get-hr-info.outputs.TARGET_VERSION }}"
+            echo "TARGET_VERSION=${{ steps.get-hr-info.outputs.TARGET_VERSION }}" >> $GITHUB_OUTPUT
+          else
+            echo "HelmRelease is set on dynamic version. Using currently deployed version ${{ steps.get-helm-info.outputs.CHART_VERSION }}"
+            echo "TARGET_VERSION=${{ steps.get-helm-info.outputs.CHART_VERSION }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Helm template update Release
+        id: helm-tpl-update-static
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@main
+        with:
+          add-repo: true
+          stdout-mode: true
+          repo-url: ${{ steps.calculate-vault-path.outputs.HELMREPO_URL }}
+          chart-name: ${{ steps.get-helm-info.outputs.CHART_NAME }}
+          chart-version: ${{ steps.set-target-version.outputs.TARGET_VERSION }}
+          output-file: update-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.set-target-version.outputs.TARGET_VERSION }}.yaml
+          values-file: ./updated-values.yaml
+      - name: Generate dyff on values
+        id: dyff-values
+        uses: ixxeL-DevOps/gha-templates/.github/actions/dyff@main
+        with:
+          first-file: current-values.yaml
+          second-file: updated-values.yaml
+      - name: Comment on PR for values dyff
+        uses: actions/github-script@v7
+        if: (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
+        env:
+          DYFF_RESULTS: ${{ steps.dyff-values.outputs.DYFF_RESULT }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `
+            #### Dyff values
+            \`\`\`
+            ${process.env.DYFF_RESULTS}
+            \`\`\`
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: output
+            })
+      - name: Generate dyff on release
+        id: dyff-helm
+        uses: ixxeL-DevOps/gha-templates/.github/actions/dyff@main
+        with:
+          first-file: helm-tpl-result/current-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.get-helm-info.outputs.CHART_VERSION }}.yaml
+          second-file: helm-tpl-result/update-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.set-target-version.outputs.TARGET_VERSION }}.yaml
+      - name: Comment on PR for helm dyff
+        uses: actions/github-script@v7
+        if: (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
+        env:
+          DYFF_RESULTS: ${{ steps.dyff-helm.outputs.DYFF_RESULT }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `
+            #### Dyff helm: \`${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.get-helm-info.outputs.CHART_VERSION }}\`
+            \`\`\`
+            ${process.env.DYFF_RESULTS}
+            \`\`\`
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: output
+            })
+      - name: Kubeconform helm template
+        id: kubeconform
+        uses: ixxeL-DevOps/gha-templates/.github/actions/kubeconform@main
+        with:
+          target: helm-tpl-result/update-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.set-target-version.outputs.TARGET_VERSION }}.yaml
+      - name: Kyverno check
+        id: kyverno-check
+        uses: ixxeL-DevOps/gha-templates/.github/actions/kyverno-apply@main
+        with:
+          policies-dir: ${{ inputs.kyverno-policies-dir }}
+          manifest-dir: helm-tpl-result/update-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.set-target-version.outputs.TARGET_VERSION }}.yaml

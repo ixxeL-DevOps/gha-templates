@@ -16,19 +16,13 @@ on:
         required: false
       sonar-token:
         required: false
-      fedid-login:
-        required: false
-      fedid-password:
-        required: false
-      fedid-client-id:
-        required: false
-      bff-key:
-        required: false
       snyk-token:
         required: false
       prisma-user:
         required: false
       prisma-pass:
+        required: false
+      datadog-apikey:
         required: false
     inputs:
       # General
@@ -49,7 +43,26 @@ on:
         type: string
         default: "false"
         description: force qui failure behavior
-      enable-e2e-tests:
+      upload-sourcemaps:
+        required: false
+        type: string
+        default: "false"
+        description: Trigger datadog upload sourcemap step
+      datadog-service:
+        required: false
+        type: string
+        description: Datadog service to announce
+      release-version:
+        required: false
+        type: string
+        default: "0.0.1"
+        description: Release version to announce
+      enable-acceptance-tests:
+        required: false
+        type: string
+        default: "true"
+        description: enables acceptance tests job
+      enable-component-tests:
         required: false
         type: string
         default: "true"
@@ -59,6 +72,41 @@ on:
         type: string
         default: "true"
         description: enables unit tests job
+      tu-script:
+        required: false
+        type: string
+        default: "test:unit:ci"
+        description: script TU to execute
+      ct-script:
+        required: false
+        type: string
+        default: "test:ct:ci"
+        description: script Component to execute
+      acceptance-script:
+        required: false
+        type: string
+        default: "test:acceptance:ci"
+        description: script Acceptance to execute
+      acceptance-output-results:
+        required: false
+        type: string
+        default: "tests/reports/coverage/acceptance"
+        description: enables acceptance tests job
+      component-output-results:
+        required: false
+        type: string
+        default: "tests/reports/coverage/components"
+        description: enables component tests job
+      unit-output-results:
+        required: false
+        type: string
+        default: "tests/reports/coverage/unit"
+        description: enables unit tests job
+      coverage-output-dir:
+        required: false
+        type: string
+        default: "tests/reports/coverage"
+        description: default coverage output directory
       push-option:
         required: false
         default: ci.skip
@@ -82,6 +130,7 @@ on:
       sonar-args:
         required: false
         type: string
+        default: "-Dsonar.scm.revision=${{ github.ref_name }}"
       # node
       node-version:
         required: false
@@ -90,35 +139,32 @@ on:
       nodejs-cache:
         required: false
         type: string
-        default: "pnpm"
+        default: "yarn"
       nodejs-package-mgmt:
         required: false
         type: string
-        default: "pnpm"
-      pnpm-version:
+        default: "yarn"
+      yarn-install-args:
         required: false
         type: string
-        default: "8"
-      # playwright
-      playwright-cache:
+        default: "--frozen-lockfile"
+      yarn-build-script:
         required: false
         type: string
-        default: "true"
+        default: "build"
       environment:
         required: false
         type: string
         default: "development"
-      fedid-url:
-        required: false
-        type: string
-      bff-url:
-        required: false
-        type: string
       gcs-bucket-name:
         required: false
         type: string
       gcs-reports-path:
         required: false
+        type: string
+      gcs-publish:
+        required: false
+        default: "true"
         type: string
       docker-target-registry:
         required: false
@@ -172,22 +218,20 @@ jobs:
     steps:
       - name: "\U0001F4E5 Checkout code"
         uses: actions/checkout@v4
-      - name: Node.js and pnpm setup
+      - name: Node.js and yarn setup
         uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.nodejs-cache }}
           node-package-mgmt: ${{ inputs.nodejs-package-mgmt }}
           workingdir: ${{ inputs.workingdir }}
-          pnpm-version: ${{ inputs.pnpm-version }}
-          dep-path: pnpm-lock.yaml
-          artifactregistry-login: "false"
+          install-args: ${{ inputs.yarn-install-args }}
       - name: Linting
-        id: pnpm-run-lint
-        uses: ixxeL-DevOps/gha-templates/.github/actions/pnpm-run@main
+        id: yarn-eslint
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
         with:
           workingdir: ${{ inputs.workingdir }}
-          script: lint
+          script: "eslint"
       - name: Hadolint Dockerfile Scan
         id: hadolint
         uses: hadolint/hadolint-action@v3.1.0
@@ -238,44 +282,66 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Node.js and pnpm setup
+      - name: Node.js and yarn setup
         uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.nodejs-cache }}
           node-package-mgmt: ${{ inputs.nodejs-package-mgmt }}
           workingdir: ${{ inputs.workingdir }}
-          pnpm-version: ${{ inputs.pnpm-version }}
-          dep-path: pnpm-lock.yaml
-          artifactregistry-login: "false"
-      - name: Unit tests
-        id: pnpm-run-tests
-        uses: ixxeL-DevOps/gha-templates/.github/actions/pnpm-run@main
+          install-args: ${{ inputs.yarn-install-args }}
+      - name: Unit tests (Yarn)
+        id: unit-tests
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
         with:
           workingdir: ${{ inputs.workingdir }}
-          script: "test:coverage"
-      - name: Find TU Lcov report
+          script: ${{ inputs.tu-script }}
+      - name: Prepare Lcov upload
         id: prepare-lcov
         uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
         with:
           workingdir: ${{ inputs.workingdir }}
           search-name: lcov.info
           destination: lcov-unit.info
-      - name: SonarCloud Scan
-        uses: sonarsource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.git-token }}
-          SONAR_TOKEN: ${{ secrets.sonar-token }}
+          tests-directory: ${{ inputs.coverage-output-dir }}
+      - name: Upload TU Lcov report
+        uses: actions/upload-artifact@v3
         with:
-          projectBaseDir: ${{ inputs.workingdir }}
-          args: >
-            ${{ inputs.sonar-args }}
-      - name: Publish test report
-        continue-on-error: true
+          name: lcov-ti
+          path: ${{ inputs.workingdir }}/lcov-unit.info
+      - name: publish index page for coverage reports
         uses: google-github-actions/upload-cloud-storage@v1
+        if: github.event_name == 'pull_request' && inputs.gcs-publish == 'true'
         with:
-          path: ${{ inputs.workingdir }}/coverage/lcov-report
-          destination: ${{ format('{0}/{1}/{2}/unit', inputs.gcs-bucket-name, inputs.gcs-reports-path, github.ref) }}
+          path: ${{ inputs.workingdir }}/tests/reports/index.html
+          destination: ${{ format('{0}/{1}/pr-{2}/', inputs.gcs-bucket-name, inputs.gcs-reports-path, github.event.pull_request.number) }}
+          parent: false
+          gzip: false
+          process_gcloudignore: false
+      - name: publish index page for coverage reports as latest
+        uses: google-github-actions/upload-cloud-storage@v1
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&  github.event_name != 'pull_request' && inputs.gcs-publish == 'true'
+        with:
+          path: ${{ inputs.workingdir }}/tests/reports/index.html
+          destination: ${{ format('{0}/{1}/latest/', inputs.gcs-bucket-name, inputs.gcs-reports-path) }}
+          parent: false
+          gzip: false
+          process_gcloudignore: false
+      - name: "Publish unit test coverage report for PR \U0001F9FE"
+        uses: google-github-actions/upload-cloud-storage@v1
+        if: github.event_name == 'pull_request' && inputs.gcs-publish == 'true'
+        with:
+          path: ${{ inputs.workingdir }}/${{ inputs.unit-output-results }}
+          destination: ${{ format('{0}/{1}/pr-{2}/unit', inputs.gcs-bucket-name, inputs.gcs-reports-path, github.event.pull_request.number) }}
+          parent: false
+          gzip: false
+          process_gcloudignore: false
+      - name: "Publish unit test coverage report latest \U0001F9FE"
+        uses: google-github-actions/upload-cloud-storage@v1
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&  github.event_name != 'pull_request' && inputs.gcs-publish == 'true'
+        with:
+          path: ${{ inputs.workingdir }}/${{ inputs.unit-output-results }}
+          destination: ${{ format('{0}/{1}/latest/unit', inputs.gcs-bucket-name, inputs.gcs-reports-path) }}
           parent: false
           gzip: false
           process_gcloudignore: false
@@ -286,9 +352,9 @@ jobs:
           run-id: ${{ github.run_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.git-admin-token }}
-  e2e-tests:
-    if: inputs.enable-e2e-tests == 'true'
-    name: "\U0001F9EA E2E tests"
+  component-tests:
+    if: inputs.enable-component-tests == 'true'
+    name: "\U0001F9EA Component tests"
     timeout-minutes: 15
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
@@ -300,53 +366,114 @@ jobs:
     steps:
       - name: "\U0001F4E5 Checkout code"
         uses: actions/checkout@v4
-      - name: Node.js and pnpm setup
+      - name: Node.js and yarn setup
         uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.nodejs-cache }}
           node-package-mgmt: ${{ inputs.nodejs-package-mgmt }}
           workingdir: ${{ inputs.workingdir }}
-          pnpm-version: ${{ inputs.pnpm-version }}
-          dep-path: pnpm-lock.yaml
-          artifactregistry-login: "false"
-      - name: Playwright setup
-        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-playwright@main
-        with:
-          cache: ${{ inputs.playwright-cache }}
-          workingdir: ${{ inputs.workingdir }}
-      - name: "Build code (pnpm) \U0001F4E6"
-        working-directory: ${{ inputs.workingdir }}
-        run: pnpm build
-      - name: Generate config file
-        uses: ixxeL-DevOps/gha-templates/.github/actions/envsubst@main
-        env:
-          ENV: ${{ inputs.environment }}
-          FEDID_URL: ${{ vars.FEDID_URL }}
-          FEDID_CLIENT_ID: ${{ secrets.fedid-client-id }}
-          BFF_URL: ${{ vars.BFF_URL }}
-          BFF_KEY: ${{ secrets.bff-key }}
+          install-args: ${{ inputs.yarn-install-args }}
+      - name: Component tests (Yarn)
+        id: component-tests
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
         with:
           workingdir: ${{ inputs.workingdir }}
-          file-input: ./config.template.js
-          file-output: ./dist/config.js
-      - name: E2E tests
-        id: pnpm-exec-playwright
-        uses: ixxeL-DevOps/gha-templates/.github/actions/pnpm-exec@main
+          script: ${{ inputs.ct-script }}
+      - name: Prepare Lcov upload
+        id: prepare-lcov
+        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
         with:
           workingdir: ${{ inputs.workingdir }}
-          script: "playwright test"
-        env:
-          PLAYWRIGHT_LOGIN: ${{ secrets.fedid-login }}
-          PLAYWRIGHT_PASSWORD: ${{ secrets.fedid-password }}
-      - name: Publish test report
-        id: publish-report
-        continue-on-error: true
-        if: always()
+          search-name: lcov.info
+          destination: lcov-ct.info
+          tests-directory: ${{ inputs.coverage-output-dir }}
+      - name: Upload CT Lcov report
+        uses: actions/upload-artifact@v3
+        with:
+          name: lcov-ct
+          path: ${{ inputs.workingdir }}/lcov-ct.info
+      - name: "Publish components test coverage report for PR \U0001F9FE"
         uses: google-github-actions/upload-cloud-storage@v1
+        if: github.event_name == 'pull_request' && inputs.gcs-publish == 'true'
         with:
-          path: ${{ inputs.workingdir }}/playwright-report
-          destination: ${{ format('{0}/{1}/{2}/e2e', inputs.gcs-bucket-name, inputs.gcs-reports-path, github.ref) }}
+          path: ${{ inputs.workingdir }}/${{ inputs.component-output-results }}
+          destination: ${{ format('{0}/{1}/pr-{2}/components', inputs.gcs-bucket-name, inputs.gcs-reports-path, github.event.pull_request.number) }}
+          parent: false
+          gzip: false
+          process_gcloudignore: false
+      - name: "Publish components test coverage report latest \U0001F9FE"
+        uses: google-github-actions/upload-cloud-storage@v1
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&  github.event_name != 'pull_request' && inputs.gcs-publish == 'true'
+        with:
+          path: ${{ inputs.workingdir }}/${{ inputs.component-output-results }}
+          destination: ${{ format('{0}/{1}/latest/components', inputs.gcs-bucket-name, inputs.gcs-reports-path) }}
+          parent: false
+          gzip: false
+          process_gcloudignore: false
+      - name: "\U0001F6AB Cancel workflow run"
+        if: failure() && inputs.quick-fail == 'true'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
+        with:
+          run-id: ${{ github.run_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.git-admin-token }}
+  acceptance-tests:
+    if: inputs.enable-acceptance-tests == 'true'
+    name: "\U0001F9EA Acceptance tests"
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+      discussions: write
+      pull-requests: write
+    steps:
+      - name: "\U0001F4E5 Checkout code"
+        uses: actions/checkout@v4
+      - name: Node.js and yarn setup
+        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ inputs.nodejs-cache }}
+          node-package-mgmt: ${{ inputs.nodejs-package-mgmt }}
+          workingdir: ${{ inputs.workingdir }}
+          install-args: ${{ inputs.yarn-install-args }}
+      - name: Acceptance tests (Yarn)
+        id: acceptance-tests
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          script: ${{ inputs.acceptance-script }}
+      - name: Prepare Lcov upload
+        id: prepare-lcov
+        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          search-name: lcov.info
+          destination: lcov-acceptance.info
+          tests-directory: ${{ inputs.coverage-output-dir }}
+      - name: Upload Acceptance Lcov report
+        uses: actions/upload-artifact@v3
+        with:
+          name: lcov-acceptance
+          path: ${{ inputs.workingdir }}/lcov-acceptance.info
+      - name: "Publish acceptances test coverage report for PR \U0001F9FE"
+        uses: google-github-actions/upload-cloud-storage@v1
+        if: github.event_name == 'pull_request' && inputs.gcs-publish == 'true'
+        with:
+          path: ${{ inputs.workingdir }}/${{ inputs.acceptance-output-results }}
+          destination: ${{ format('{0}/{1}/pr-{2}/acceptance', inputs.gcs-bucket-name, inputs.gcs-reports-path, github.event.pull_request.number) }}
+          parent: false
+          gzip: false
+          process_gcloudignore: false
+      - name: "Publish acceptance test coverage report latest \U0001F9FE"
+        uses: google-github-actions/upload-cloud-storage@v1
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&  github.event_name != 'pull_request' && inputs.gcs-publish == 'true'
+        with:
+          path: ${{ inputs.workingdir }}/${{ inputs.acceptance-output-results }}
+          destination: ${{ format('{0}/{1}/latest/acceptance', inputs.gcs-bucket-name, inputs.gcs-reports-path) }}
           parent: false
           gzip: false
           process_gcloudignore: false
@@ -370,24 +497,25 @@ jobs:
     steps:
       - name: "\U0001F4E5 Checkout code"
         uses: actions/checkout@v4
-      - name: Node.js and pnpm setup
+      - name: GCloud GAR Authentication
+        id: gcloud-gar-auth
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
+        with:
+          registry: ${{ inputs.gcp-base-url }}
+      - name: Node.js and yarn setup
         uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.nodejs-cache }}
           node-package-mgmt: ${{ inputs.nodejs-package-mgmt }}
           workingdir: ${{ inputs.workingdir }}
-          pnpm-version: ${{ inputs.pnpm-version }}
-          dep-path: pnpm-lock.yaml
-          artifactregistry-login: "false"
+          install-args: ${{ inputs.yarn-install-args }}
       - name: "\U0001F4E6 Compile code"
-        working-directory: ${{ inputs.workingdir }}
-        run: pnpm build
-      - name: GCloud GAR Authentication
-        id: gcloud-gar-auth
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
+        id: yarn-build
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
         with:
-          registry: ${{ inputs.gcp-base-url }}
+          workingdir: ${{ inputs.workingdir }}
+          script: ${{ inputs.yarn-build-script }}
       - name: Get branch name
         id: branch-name
         uses: tj-actions/branch-names@v7
@@ -451,12 +579,57 @@ jobs:
           run-id: ${{ github.run_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.git-admin-token }}
-  Release:
+      - name: Upload Datadog sourcemaps
+        if: inputs.upload-sourcemaps == 'true'
+        working-directory: ${{ inputs.workingdir }}
+        run: |
+          ./node_modules/.bin/datadog-ci sourcemaps upload ./dist --service=${{ inputs.image-name }} --release-version=${{ inputs.release-version }}  --minified-path-prefix=/
+        env:
+          DATADOG_API_KEY: ${{ secrets.datadog-apikey }}
+          DATADOG_API_HOST: api.datadoghq.eu
+          DATADOG_SITE: datadoghq.eu
+  Sonar-analysis:
+    name: "\U0001F300 Sonar Analysis"
+    timeout-minutes: 6
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs: [unit-tests, acceptance-tests, component-tests]
+    permissions:
+      id-token: write
+      contents: read
+      discussions: write
+      pull-requests: write
+    if: always() && contains(needs.*.result, 'success') && !(contains(needs.*.result, 'failure')) && !(contains(needs.*.result, 'cancelled'))
+    steps:
+      - name: "\U0001F4E5 Checkout code"
+        uses: actions/checkout@v4
+      - name: Download Lcov reports
+        uses: actions/download-artifact@v3
+        with:
+          path: ${{ inputs.workingdir }}/${{ inputs.coverage-output-dir }}
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.git-token }}
+          SONAR_TOKEN: ${{ secrets.sonar-token }}
+        with:
+          projectBaseDir: ${{ inputs.workingdir }}
+          args: >
+            ${{ inputs.sonar-args }}
+
+  Release-docker:
     name: "\U0001F680 Release Docker image"
     timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    needs: [static-analysis, unit-tests, e2e-tests, docker-build]
+    needs:
+      [
+        static-analysis,
+        unit-tests,
+        component-tests,
+        acceptance-tests,
+        docker-build,
+      ]
     permissions:
       id-token: write
       contents: read
@@ -492,7 +665,14 @@ jobs:
     timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    needs: [static-analysis, unit-tests, e2e-tests, docker-build]
+    needs:
+      [
+        static-analysis,
+        unit-tests,
+        component-tests,
+        acceptance-tests,
+        docker-build,
+      ]
     permissions:
       id-token: write
       contents: read
@@ -573,7 +753,14 @@ jobs:
     timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    needs: [static-analysis, unit-tests, e2e-tests, docker-build]
+    needs:
+      [
+        static-analysis,
+        unit-tests,
+        component-tests,
+        acceptance-tests,
+        docker-build,
+      ]
     permissions:
       id-token: write
       contents: read

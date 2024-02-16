@@ -10,7 +10,7 @@ on:
       helm-pull-repo-url:
         description: Name of the docker image
         required: false
-        default: https://whbox-chartmuseum.pp.dktapp.cloud
+        default: ""
         type: string
       helm-pull-repo-username:
         description: Name of the docker image
@@ -20,7 +20,7 @@ on:
       helm-push-repo-url:
         description: Name of the docker image
         required: false
-        default: https://whbox-chartmuseum.dktapp.cloud
+        default: ""
         type: string
       helm-push-repo-username:
         description: Name of the docker image

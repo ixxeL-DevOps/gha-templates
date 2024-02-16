@@ -1,0 +1,72 @@
+---
+name: Nodejs setup
+description: setup node js
+author: ixxeL
+inputs:
+  workingdir:
+    description: directory in which to find the Dockerfile
+    required: false
+    default: .
+  node-version:
+    description: version of node to install
+    required: false
+    default: "18"
+  dep-path:
+    description: dependency path for yarn
+    required: false
+    default: "yarn.lock"
+  cache:
+    description: using cache
+    required: false
+    default: ""
+  node-package-mgmt:
+    description: package manager to use for nodejs
+    required: false
+    default: "yarn"
+  artifactregistry-login:
+    description: Refresh token access in .npmrc
+    required: false
+    default: "true"
+  process-install:
+    description: perform install directive
+    required: false
+    default: "true"
+  pnpm-version:
+    description: version of pnpm to install
+    required: false
+    default: "8"
+  install-args:
+    description: arguments for install command
+    required: false
+    default: "--frozen-lockfile"
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      if: inputs.node-package-mgmt == 'pnpm'
+      id: setup-pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: ${{ inputs.pnpm-version }}
+        run_install: false
+    - name: Setup Node.js
+      id: setup-node
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.cache }}
+        cache-dependency-path: ${{ inputs.workingdir }}/${{ inputs.dep-path }}
+    - name: Yarn/Pnpm registry login
+      if: inputs.artifactregistry-login == 'true'
+      id: registry-login
+      working-directory: ${{ inputs.workingdir }}
+      shell: bash
+      run: |
+        ${{ inputs.node-package-mgmt }} artifactregistry-login
+    - name: Yarn/Pnpm install dependencies
+      if: inputs.process-install == 'true'
+      id: dep-install
+      working-directory: ${{ inputs.workingdir }}
+      shell: bash
+      run: |
+        ${{ inputs.node-package-mgmt }} install ${{ inputs.install-args }}

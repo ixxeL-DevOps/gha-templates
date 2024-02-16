@@ -18,8 +18,6 @@ on:
         default: test
         type: string
     secrets:
-      DKTUNITED_TOKEN:
-        required: true
       GHA_PERSONNAL_ADMIN_TOKEN:
         required: true
 jobs:
@@ -35,10 +33,10 @@ jobs:
     if: contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref)
     uses: ixxeL-DevOps/gha-templates/.github/workflows/__promote-and-tag__.yaml@main
     with:
-      workload_identity_provider: "projects/208726332934/locations/global/workloadIdentityPools/ci-tools/providers/github"
-      service_account: "github-writer@warehousebox-ntqf.iam.gserviceaccount.com"
+      workload_identity_provider: ""
+      service_account: ""
       gcp-registry: europe-west4-docker.pkg.dev
-      gcp-repository: warehousebox-ntqf/whbox-docker-images
+      gcp-repository: docker-images
       image-name: ${{ inputs.image-name }}
       original-tag: ${{ inputs.original-tag }}
       target-env: ${{ inputs.target-env }}

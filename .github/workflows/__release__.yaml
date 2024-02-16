@@ -94,7 +94,7 @@ on:
         type: boolean
       vault-url:
         required: false
-        default: https://vault.pp.dktapp.cloud
+        default: ""
         type: string
       vault-namespace:
         required: false
@@ -102,17 +102,17 @@ on:
         type: string
       vault-role:
         required: false
-        default: whbox-ga-role
+        default: ""
         type: string
       vault-secret-path:
         required: false
-        default: whbox-tools/data/gh-actions
+        default: secretengine/data/gh-actions
         type: string
 
 jobs:
   promote-and-tag:
     name: promote-and-tag
-    runs-on: [self-hosted, decathlon]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       checks: write

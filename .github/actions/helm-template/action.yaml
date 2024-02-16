@@ -14,6 +14,10 @@ inputs:
   chart-name:
     description: name of the chart
     required: false
+  chart-version:
+    description: version of the chart
+    required: false
+    default: ""
   values-file:
     description: name of the values.yaml file
     required: false
@@ -73,15 +77,16 @@ runs:
         then
           echo -e "${YELLOW}[ EXECUTING ] > Adding repo named ${{ inputs.repo-name }} from ${{ inputs.repo-url }}.${BLANK}"
           helm repo add ${{ inputs.repo-name }} ${{ inputs.repo-url }} --force-update \
-                                                          --pass-credentials \
-                                                          --username=${{ inputs.repo-user }} \
-                                                          --password=${{ inputs.repo-pwd }} \
-                                                          --insecure-skip-tls-verify
+                                                                       --pass-credentials \
+                                                                       --username=${{ inputs.repo-user }} \
+                                                                       --password=${{ inputs.repo-pwd }} \
+                                                                       --insecure-skip-tls-verify
           if [[ $? = 0 ]]
           then
             echo -e "${GREEN}[ SUCCESS ] > Helm repo added successfully !${BLANK}"
             WORKINGDIR=${{ inputs.repo-name }}/${{ inputs.chart-name }}
             CHART_NAME=${{ inputs.chart-name }}
+            CHART_VERSION=${{ inputs.chart-version }}
           else
             echo -e "${RED}[ ERROR ] > Helm repo failed to be added.${BLANK}"
             exit 1
@@ -113,15 +118,14 @@ runs:
           echo $SETTINGS
         fi
 
-        echo -e "${YELLOW}[ EXECUTING ] > Executing helm chart ${CHART_NAME} templating.${BLANK}"
-        VALUES_FILE=${WORKINGDIR}/${{ inputs.values-file }}
+        echo -e "${YELLOW}[ EXECUTING ] > Executing helm chart ${PURPLE}${CHART_NAME}${YELLOW} templating with version ${PURPLE}${CHART_VERSION}${YELLOW}${BLANK}"
         if [[ ! -d ${{ inputs.output-dir }} ]]; then mkdir -p ${{ inputs.output-dir }}; fi
         if [[ ${{ inputs.stdout-mode }} = true ]]
         then
-          helm template ${CHART_NAME} ${WORKINGDIR} --values="${VALUES_FILE}" ${SETTINGS} > ${{ inputs.output-dir }}/${{ inputs.output-file }}
+          helm template ${CHART_NAME} ${WORKINGDIR} --values="${{ inputs.workingdir }}/${{ inputs.values-file }}" --version="${CHART_VERSION}" ${SETTINGS} > ${{ inputs.output-dir }}/${{ inputs.output-file }}
         elif [[ ${{ inputs.stdout-mode }} = "false" ]]
         then
-          helm template ${CHART_NAME} ${WORKINGDIR} --values="${VALUES_FILE}" ${SETTINGS} --output-dir ${{ inputs.output-dir }}
+          helm template ${CHART_NAME} ${WORKINGDIR} --values="${{ inputs.workingdir }}/${{ inputs.values-file }}" --version="${CHART_VERSION}" ${SETTINGS} --output-dir ${{ inputs.output-dir }}
         fi
 
         if [[ $? = 0 ]]
