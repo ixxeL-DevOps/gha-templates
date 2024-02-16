@@ -1,70 +1,33 @@
 ---
-name: Automate tag
+name: Restore ref name
 on:
-  workflow_call:
-    secrets:
-      git-token:
-        required: true
-    inputs:
-      workingdir:
-        required: false
-        default: "./"
-        type: string
-      runs-on:
-        description: OS to run jobs on
-        required: false
-        default: "ubuntu-latest"
-        type: string
-      ci-image:
-        description: docker image to run pipeline on
-        required: false
-        default: "ixxel/toolbox:base-latest"
-        type: string
-      workflows-directory:
-        description: directory in which to find workflows
-        required: false
-        default: "./.github/workflows/*.yaml"
-        type: string
-      actions-source:
-        description: origin of actions
-        required: false
-        default: "ixxeL-DevOps"
-        type: string
-      git-workdir:
-        required: false
-        default: "."
-        type: string
-      push-option:
-        required: false
-        default: "ci.skip"
-        type: string
   workflow_dispatch:
 
 jobs:
   restore-ref-name:
     name: ":recycle: Restore ref"
     timeout-minutes: 5
-    runs-on: ${{ inputs.runs-on }}
+    runs-on: ubuntu-latest
     container:
-      image: ${{ inputs.ci-image }}
+      image: ixxel/toolbox:base-latest
     steps:
       - name: Clone code
         uses: actions/checkout@v4
         with:
           fetch-depth: "0"
-          token: ${{ secrets.git-token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Restore ref
         id: restore-ref
         uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
         with:
-          workflows-directory: ${{ inputs.workflows-directory }}
-          actions-source: ${{ inputs.actions-source }}
+          workflows-directory: ./.github/workflows/*.yaml
+          actions-source: ixxeL-DevOps
           new-ref: ${{ github.head_ref }}
       - name: Git push
         id: git-push-final
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
           git-msg: ":recycle: Restore parameters from user ${GITHUB_ACTOR} [skip ci]"
-          git-workdir: ${{ inputs.workingdir }}
-          git-staging-dir: ${{ inputs.workingdir }}
-          push-option: ${{ inputs.push-option }}
+          git-workdir: .
+          git-staging-dir: .
+          push-option: ci.skip
