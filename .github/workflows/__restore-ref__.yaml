@@ -38,6 +38,7 @@ on:
         required: false
         default: "ci.skip"
         type: string
+  workflow_dispatch:
 
 jobs:
   restore-ref-name:
@@ -54,14 +55,14 @@ jobs:
           token: ${{ secrets.git-token }}
       - name: Restore ref
         id: restore-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
         with:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: ${{ github.head_ref }}
       - name: Git push
         id: git-push-final
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v1.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
           git-msg: ":recycle: Restore parameters from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
