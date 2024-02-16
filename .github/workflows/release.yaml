@@ -35,7 +35,7 @@ jobs:
       id-token: write
       pull-requests: write
       statuses: write
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__release__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__release__.yaml@v1.4.0
     with:
       increment-type: ${{ inputs.increment-type }}
       npm-ignore-version: ${{ inputs.npm-ignore-version }}
