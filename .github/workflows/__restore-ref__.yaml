@@ -13,12 +13,12 @@ on:
       runs-on:
         description: OS to run jobs on
         required: false
-        default: ubuntu-latest
+        default: "ubuntu-latest"
         type: string
       ci-image:
         description: docker image to run pipeline on
         required: false
-        default: ixxel/toolbox:base-latest
+        default: "ixxel/toolbox:base-latest"
         type: string
       workflows-directory:
         description: directory in which to find workflows
@@ -28,17 +28,17 @@ on:
       actions-source:
         description: origin of actions
         required: false
-        default: ixxeL-DevOps
+        default: "ixxeL-DevOps"
         type: string
       git-workdir:
         required: false
-        default: .
+        default: "."
         type: string
       push-option:
         required: false
-        default: ci.skip
+        default: "ci.skip"
         type: string
-  workflow_dispatch:
+
 jobs:
   restore-ref-name:
     name: ":recycle: Restore ref"
