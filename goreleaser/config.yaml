@@ -1,0 +1,166 @@
+project_name: gha-templates
+release:
+  github:
+    owner: ixxeL-DevOps
+    name: gha-templates
+  prerelease: auto
+  make_latest: "true"
+  name_template: '{{.Tag}}'
+  header: |
+    ## Upgrading
+
+    This project uses the semver versioning and ensures that following rules:
+
+    The patch release does not introduce any breaking changes. So if you are upgrading from v1.5.1 to v1.5.3 there should be no special instructions to follow.
+    The minor release might introduce minor changes with a workaround. If you are upgrading from v1.3.0 to v1.5.2 please make sure to check upgrading details in both v1.3 to v1.4 and v1.4 to v1.5 upgrading instructions.
+    The major release introduces backward incompatible behavior changes. It is recommended to take a backup using disaster recovery guide.
+  footer: |
+    **Full Changelog**: https://github.com/ixxeL-DevOps/gha-templates/compare/{{ .PreviousTag }}...{{ .Tag }}
+builds:
+  - id: gha-templates
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+    goarm:
+      - "6"
+    gomips:
+      - hardfloat
+    goamd64:
+      - v1
+    targets:
+      - linux_amd64_v1
+      - linux_arm64
+      - linux_386
+      - darwin_amd64_v1
+      - darwin_arm64
+      - windows_amd64_v1
+      - windows_arm64
+      - windows_386
+    dir: .
+    main: .
+    binary: gha-templates
+    builder: go
+    skip: true
+    gobinary: go
+    command: build
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
+archives:
+  - id: default
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
+    format: tar.gz
+    files:
+      - src: license*
+      - src: LICENSE*
+      - src: readme*
+      - src: README*
+      - src: changelog*
+      - src: CHANGELOG*
+snapshot:
+  name_template: '{{ .Env.SNAPSHOT_VERSION }}-SNAPSHOT-{{.ShortCommit}}'
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
+  algorithm: sha256
+changelog:
+  filters:
+    exclude:
+      - '^test:'
+      - ^chore
+      - merge conflict
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+      - go mod tidy
+  sort: asc
+  use: github
+  groups:
+    - title: "\U0001F4E6 Dependency updates"
+      regexp: ^.*?(feat|fix|chore)\(deps\)!?:.+$
+      order: 300
+    - title: "\U0001F680 New Features"
+      regexp: ^.*?feat(\([[:word:]]+\))??!?:.+$
+      order: 100
+    - title: ⚠️ Security updates
+      regexp: ^.*?sec(\([[:word:]]+\))??!?:.+$
+      order: 150
+    - title: "\U0001F41E \U0001F41B Bug fixes"
+      regexp: ^.*?(fix|refactor)(\([[:word:]]+\))??!?:.+$
+      order: 200
+    - title: "\U0001F4DA Documentation updates"
+      regexp: ^.*?docs?(\([[:word:]]+\))??!?:.+$
+      order: 400
+    - title: "\U0001F3D7️ Build process updates"
+      regexp: ^.*?(build|ci)(\([[:word:]]+\))??!?:.+$
+      order: 400
+    - title: "\U0001F9F0 Other work"
+      order: 9999
+dist: goreleaser
+env_files:
+  github_token: ~/.config/goreleaser/github_token
+  gitlab_token: ~/.config/goreleaser/gitlab_token
+  gitea_token: ~/.config/goreleaser/gitea_token
+source:
+  name_template: '{{ .ProjectName }}-{{ .Version }}'
+  format: tar.gz
+gomod:
+  gobinary: go
+announce:
+  twitter:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL }}'
+  mastodon:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL }}'
+    server: ""
+  reddit:
+    title_template: '{{ .ProjectName }} {{ .Tag }} is out!'
+    url_template: '{{ .ReleaseURL }}'
+  slack:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL }}'
+    username: GoReleaser
+  discord:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL }}'
+    author: GoReleaser
+    color: "3888754"
+    icon_url: https://goreleaser.com/static/avatar.png
+  teams:
+    title_template: '{{ .ProjectName }} {{ .Tag }} is out!'
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL }}'
+    color: '#2D313E'
+    icon_url: https://goreleaser.com/static/avatar.png
+  smtp:
+    subject_template: '{{ .ProjectName }} {{ .Tag }} is out!'
+    body_template: 'You can view details from: {{ .ReleaseURL }}'
+  mattermost:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL }}'
+    title_template: '{{ .ProjectName }} {{ .Tag }} is out!'
+    username: GoReleaser
+  linkedin:
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL }}'
+  telegram:
+    message_template: '{{ .ProjectName }} {{ mdv2escape .Tag }} is out! Check it out at {{ mdv2escape .ReleaseURL }}'
+    parse_mode: MarkdownV2
+  webhook:
+    message_template: '{ "message": "{{ .ProjectName }} {{ .Tag }} is out! Check it out at {{ .ReleaseURL }}"}'
+    content_type: application/json; charset=utf-8
+  opencollective:
+    title_template: '{{ .Tag }}'
+    message_template: '{{ .ProjectName }} {{ .Tag }} is out!<br/>Check it out at <a href="{{ .ReleaseURL }}">{{ .ReleaseURL }}</a>'
+git:
+  tag_sort: -version:refname
+  prerelease_suffix: '-'
+  ignore_tags:
+    - latest
+    - v?
+    - v??
+    - v?.?
+    - v?.??
+    - v??.?
+    - v??.??
+github_urls:
+  download: https://github.com
+gitlab_urls:
+  download: https://gitlab.com
