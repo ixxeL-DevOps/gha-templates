@@ -80,7 +80,7 @@ jobs:
           go-version: stable
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v1.2.3
         with:
           git-workdir: ${{ inputs.workingdir }}
       - name: Install svu
@@ -100,14 +100,14 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
       - name: Substitute ref
         id: substitute-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.2.3
         with:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: ${{ steps.bump-version.outputs.VERSION }}
       - name: Git push
         id: git-push
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v1.2.3
         with:
           git-msg: ":package: CI release version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
@@ -115,7 +115,7 @@ jobs:
           push-option: ${{ inputs.push-option }}
       - name: "\U0001F3F7️ Git tag"
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v1.2.3
         with:
           tag-msg: "CI auto Git tag"
           tag-value: ${{ steps.bump-version.outputs.VERSION }}
@@ -150,14 +150,14 @@ jobs:
           git push -f origin --tags
       - name: Restore ref
         id: restore-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.2.3
         with:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: main
       - name: Git push
         id: git-push-final
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v1.2.3
         with:
           git-msg: ":recycle: Restore parameters from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
