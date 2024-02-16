@@ -2,6 +2,10 @@
 name: Restore ref name
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "tag"
+        required: true
 jobs:
   restore-ref-name:
     name: ":recycle: Restore ref"
@@ -20,6 +24,42 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: .
+      - name: "\U0001F3F7️ Git tag"
+        id: git-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        with:
+          tag-msg: "CI auto Git tag"
+          tag-value: ${{ inputs.tag }}
+          commit-sha: ${{ github.sha }}
+          git-workdir: .
+          push-option: ci.skip
+      - name: Refresh code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+          token: ${{ secrets.PAT }}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean --debug --timeout 60m
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract tags
+        id: extract-tags
+        run: |
+          major_version=$(echo "${{ inputs.tag }}" | awk -F. '{print $1}')
+          minor_version=$(echo "${{ inputs.tag }}" | awk -F. '{print $1"."$2}')
+          echo "MAJOR_TAG=$major_version" >> $GITHUB_OUTPUT
+          echo "MINOR_TAG=$minor_version" >> $GITHUB_OUTPUT
+      - name: Update stable tag to latest version
+        run: |
+          git tag -f ${{ steps.extract-tags.outputs.MAJOR_TAG }} ${{ github.ref_name }}
+          git tag -f ${{ steps.extract-tags.outputs.MINOR_TAG }} ${{ github.ref_name }}
+          git tag -f latest ${{ github.ref_name }}
+          git push -f origin --tags
+
       - name: Restore ref
         id: restore-ref
         uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main

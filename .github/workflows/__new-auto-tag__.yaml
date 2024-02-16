@@ -113,42 +113,8 @@ jobs:
           git-workdir: ${{ inputs.workingdir }}
           git-staging-dir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
-      - name: "\U0001F3F7️ Git tag"
-        id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
-        with:
-          tag-msg: "CI auto Git tag"
-          tag-value: ${{ steps.bump-version.outputs.VERSION }}
-          commit-sha: ${{ github.sha }}
-          git-workdir: ${{ inputs.workingdir }}
-          push-option: ${{ inputs.push-option }}
-      - name: Refresh code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: "0"
-          token: ${{ secrets.git-token }}
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean --debug --timeout 60m
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract tags
-        id: extract-tags
-        run: |
-          major_version=$(echo "${{ steps.bump-version.outputs.VERSION }}" | awk -F. '{print $1}')
-          minor_version=$(echo "${{ steps.bump-version.outputs.VERSION }}" | awk -F. '{print $1"."$2}')
-          echo "MAJOR_TAG=$major_version" >> $GITHUB_OUTPUT
-          echo "MINOR_TAG=$minor_version" >> $GITHUB_OUTPUT
-      - name: Update stable tag to latest version
-        run: |
-          git tag -f ${{ steps.extract-tags.outputs.MAJOR_TAG }} ${{ github.ref_name }}
-          git tag -f ${{ steps.extract-tags.outputs.MINOR_TAG }} ${{ github.ref_name }}
-          git tag -f latest ${{ github.ref_name }}
-          git push -f origin --tags
       - name: Invoke workflow to restore
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: __restore-ref__.yaml
+          inputs: '{ "tag": "${{ steps.bump-version.outputs.VERSION }}" }'
