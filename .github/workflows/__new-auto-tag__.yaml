@@ -74,18 +74,15 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
-
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: stable
-
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v1.2.1
         with:
           git-workdir: ${{ inputs.workingdir }}
-
       - name: Install svu
         run: |
           rm -f svu_1.12.0_linux_amd64.tar.gz
@@ -93,40 +90,35 @@ jobs:
           tar -xzvf svu_1.12.0_linux_amd64.tar.gz
           chmod +x svu
           mv svu /usr/local/bin/
-
       - name: Detect bump
         id: bump-version
         run: |
           VERSION=$(svu n)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Substitute ref
         id: substitute-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.2.1
         with:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: ${{ steps.bump-version.outputs.VERSION }}
-
       - name: Git push
         id: git-push
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v1.2.1
         with:
           git-msg: ":package: CI release version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
           git-staging-dir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
-
       - name: "\U0001F3F7️ Git tag"
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v1.2.1
         with:
           tag-msg: "CI auto Git tag"
           tag-value: ${{ steps.bump-version.outputs.VERSION }}
           commit-sha: ${{ github.sha }}
           git-workdir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
@@ -135,7 +127,6 @@ jobs:
           args: release --clean --debug --timeout 60m
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Extract tags
         id: extract-tags
         run: |
@@ -143,25 +134,22 @@ jobs:
           minor_version=$(echo "${{ steps.bump-version.outputs.VERSION }}" | awk -F. '{print $1"."$2}')
           echo "MAJOR_TAG=$major_version" >> $GITHUB_OUTPUT
           echo "MINOR_TAG=$minor_version" >> $GITHUB_OUTPUT
-
       - name: Update stable tag to latest version
         run: |
           git tag -f ${{ steps.extract-tags.outputs.MAJOR_TAG }} ${{ github.ref_name }}
           git tag -f ${{ steps.extract-tags.outputs.MINOR_TAG }} ${{ github.ref_name }}
           git tag -f latest ${{ github.ref_name }}
           git push -f origin --tags
-
       - name: Restore ref
         id: restore-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.2.1
         with:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: main
-
       - name: Git push
         id: git-push-final
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v1.2.1
         with:
           git-msg: ":recycle: Restore parameters from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
