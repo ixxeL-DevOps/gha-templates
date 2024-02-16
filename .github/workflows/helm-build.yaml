@@ -50,7 +50,7 @@ jobs:
       group: "${{ github.workflow }}-${{ github.head_ref }}"
       cancel-in-progress: true
     if: (!contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref))
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__helm-build__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__helm-build__.yaml@v1.1.1
     with:
       workingdir: ${{ inputs.workingdir }}
       helm-tests-dir: ${{ inputs.helm-test-dir }}
@@ -65,7 +65,7 @@ jobs:
       group: "${{ github.ref }}"
       cancel-in-progress: true
     if: contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref)
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__helm-build__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__helm-build__.yaml@v1.1.1
     with:
       workingdir: ${{ inputs.workingdir }}
       helm-tests-dir: ${{ inputs.helm-test-dir }}
