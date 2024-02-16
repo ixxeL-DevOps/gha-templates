@@ -28,7 +28,7 @@ on:
       actions-source:
         description: origin of actions
         required: false
-        default: ixxeL-actions
+        default: ixxeL-DevOps
         type: string
       new-ref:
         required: false
@@ -85,19 +85,21 @@ jobs:
         with:
           git-workdir: ${{ inputs.workingdir }}
           branch: ${{ inputs.release-target-branch }}
+      - name: Install svu
+        run: |
+          mkdir dl
+          wget https://github.com/caarlos0/svu/releases/download/v1.12.0/svu_1.12.0_linux_amd64.tar.gz -P dl
+          cd dl
+          tar -xzvf svu_1.12.0_linux_amd64.tar.gz
+          chmod +x svu
+          mv svu /usr/local/bin/
+          cd ..
+          rm -rf dl
       - name: Detect bump
-        id: detect-bump
-        uses: ixxeL-DevOps/gha-templates/.github/actions/detect-bump@main
-        with:
-          release-regex: '\s*:package: CI release version ${{ steps.get-last-tag.outputs.LAST_TAG }}.+'
-          minor-regex: ^(feat/.+)$
-          major-regex: ^((((feat|fix|chore|docs|perf|refactor|build|ci|revert|style|test)!)|(!(feat|fix|chore|docs|perf|refactor|build|ci|revert|style|test)))/.+)$
-      - name: Bump version
         id: bump-version
-        uses: ixxeL-DevOps/gha-templates/.github/actions/bump-version@main
-        with:
-          increment: ${{ steps.detect-bump.outputs.BUMP_KIND }}
-          current-version: ${{ steps.get-last-tag.outputs.LAST_TAG != '' && steps.get-last-tag.outputs.LAST_TAG || 'v1.0.0' }}
+        run: |
+          VERSION=$(svu n)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
       - name: Substitute ref
         id: substitute-ref
         uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
@@ -129,28 +131,19 @@ jobs:
           target-branch: ${{ inputs.release-target-branch }}
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Extract Major
-        id: extract-major
+      - name: Extract tags
+        id: extract-tags
         run: |
-          if [[ "${{ steps.bump-version.outputs.VERSION }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            BASE_VERSION=$(echo "${{ steps.bump-version.outputs.VERSION }}" | grep -Eo "^v?[0-9]{1}")
-            echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_OUTPUT
-          fi
-      - name: Delete git tag
-        id: git-tag-delete
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag-delete@main
-        with:
-          tag: ${{ steps.extract-major.outputs.BASE_VERSION }}
-          git-workdir: ${{ inputs.workingdir }}
-      - name: Git update base tag
-        id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
-        with:
-          tag-msg: "update tag semver [skip ci]"
-          tag-value: ${{ steps.extract-major.outputs.BASE_VERSION }}
-          git-workdir: ${{ inputs.workingdir }}
-          push-option: ${{ inputs.push-option }}
-          commit-sha: ${{ steps.git-push.outputs.GIT_PUSHED_COMMIT_SHA }}
+          major_version=$(echo "${{ steps.bump-version.outputs.VERSION }}" | awk -F. '{print $1}')
+          minor_version=$(echo "${{ steps.bump-version.outputs.VERSION }}" | awk -F. '{print $1"."$2}')
+          echo "MAJOR_TAG=$major_version" >> $GITHUB_OUTPUT
+          echo "MINOR_TAG=$minor_version" >> $GITHUB_OUTPUT
+      - name: Update stable tag to latest version
+        run: |
+          git tag -f ${{ steps.extract-tags.outputs.MAJOR_TAG }} ${{ github.ref_name }}
+          git tag -f ${{ steps.extract-tags.outputs.MINOR_TAG }} ${{ github.ref_name }}
+          git tag -f latest ${{ github.ref_name }}
+          git push -f origin --tags
       - name: Git revert to main
         id: git-revert
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@main

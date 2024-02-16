@@ -17,6 +17,10 @@ inputs:
     required: false
     default: main
     description: branch to taget
+  prerelease:
+    required: false
+    default: "false"
+    description: Mark the release as a prerelease
 
 runs:
   using: composite
@@ -28,7 +32,7 @@ runs:
         gh --version
 
         echo -e "${YELLOW}[ EXECUTING ] > Releasing on tag ${{ inputs.tag }}${BLANK}"
-        gh release create ${{ inputs.tag }} --generate-notes --latest --verify-tag=${{ inputs.verify-tag }} --target=${{ inputs.target-branch }} --notes-start-tag=${{ inputs.last-tag }}
+        gh release create ${{ inputs.tag }} --generate-notes --latest --verify-tag=${{ inputs.verify-tag }} --target=${{ inputs.target-branch }} --notes-start-tag=${{ inputs.last-tag }} --prerelease=${{ inputs.prerelease }}
       shell: bash
       env:
         RED: \033[1;31m
