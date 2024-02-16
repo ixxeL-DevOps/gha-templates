@@ -76,12 +76,12 @@ jobs:
           token: ${{ secrets.git-token }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.workingdir }}
       - name: Get last tag
         id: get-last-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         with:
           git-workdir: ${{ inputs.workingdir }}
           branch: ${{ inputs.release-target-branch }}
@@ -102,20 +102,20 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
       - name: Substitute ref
         id: substitute-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v0.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
         with:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: ${{ steps.bump-version.outputs.VERSION }}
       - name: Update changelog
         id: changelog
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@v0.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
           release-name: ${{ steps.bump-version.outputs.VERSION }}
       - name: Git push
         id: git-push
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v0.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
           git-msg: ":package: CI release version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
@@ -123,11 +123,11 @@ jobs:
           push-option: ${{ inputs.push-option }}
       - name: GH Release
         id: gh-release
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.bump-version.outputs.VERSION }}
           verify-tag: ${{ inputs.release-verify-tag }}
-          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG }}
+          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG != '' && steps.get-last-tag.outputs.LAST_TAG || '' }}
           target-branch: ${{ inputs.release-target-branch }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -146,7 +146,7 @@ jobs:
           git push -f origin --tags
       - name: Git revert to main
         id: git-revert
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@v0.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@main
         with:
           git-workdir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
