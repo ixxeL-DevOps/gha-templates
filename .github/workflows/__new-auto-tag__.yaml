@@ -83,9 +83,10 @@ jobs:
 
       - name: Install svu
         run: |
-          echo 'deb [trusted=yes] https://apt.fury.io/caarlos0/ /' | sudo tee /etc/apt/sources.list.d/caarlos0.list
-          sudo apt update
-          sudo apt install svu
+          wget https://github.com/caarlos0/svu/releases/download/v1.12.0/svu_1.12.0_linux_amd64.tar.gz
+          tar -xzvf svu_1.12.0_linux_amd64.tar.gz
+          chmod +x svu
+          mv svu /usr/local/bin/
 
       - name: Detect bump
         id: bump-version
