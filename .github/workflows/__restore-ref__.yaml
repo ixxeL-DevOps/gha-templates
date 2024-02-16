@@ -2,7 +2,6 @@
 name: Restore ref name
 on:
   workflow_dispatch:
-
 jobs:
   restore-ref-name:
     name: ":recycle: Restore ref"
@@ -18,14 +17,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Restore ref
         id: restore-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.1.0
         with:
           workflows-directory: ./.github/workflows/*.yaml
           actions-source: ixxeL-DevOps
           new-ref: ${{ github.head_ref }}
       - name: Git push
         id: git-push-final
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v1.1.0
         with:
           git-msg: ":recycle: Restore parameters from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: .
