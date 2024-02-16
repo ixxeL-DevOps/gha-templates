@@ -161,6 +161,7 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
+      - run: git checkout HEAD^
       - name: Restore ref
         id: restore-ref
         uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.3.0
