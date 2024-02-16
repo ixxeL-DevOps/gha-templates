@@ -31,7 +31,7 @@ jobs:
       pull-requests: write
       statuses: write
     if: contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref)
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__promote-and-tag__.yaml@v1.3.0
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__promote-and-tag__.yaml@main
     with:
       workload_identity_provider: ""
       service_account: ""
