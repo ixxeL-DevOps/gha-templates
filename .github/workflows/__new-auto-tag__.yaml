@@ -28,7 +28,7 @@ on:
       actions-source:
         description: origin of actions
         required: false
-        default: ixxeL-actions
+        default: ixxeL-DevOps
         type: string
       new-ref:
         required: false
