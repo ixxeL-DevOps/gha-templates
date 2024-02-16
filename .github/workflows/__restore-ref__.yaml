@@ -15,16 +15,21 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Git config
+        id: git-config
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        with:
+          git-workdir: .
       - name: Restore ref
         id: restore-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v1.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
         with:
           workflows-directory: ./.github/workflows/*.yaml
           actions-source: ixxeL-DevOps
-          new-ref: ${{ github.head_ref }}
+          new-ref: ${{ github.ref_name }}
       - name: Git push
         id: git-push-final
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v1.1.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
           git-msg: ":recycle: Restore parameters from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: .
