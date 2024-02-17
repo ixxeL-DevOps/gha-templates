@@ -28,6 +28,10 @@ on:
         required: false
         default: Dockerfile
         type: string
+      github-api-auth:
+        required: false
+        default: true
+        type: boolean
       fail-on:
         required: false
         default: critical
@@ -36,11 +40,11 @@ on:
         required: false
         default: docker.io/ixxel
         type: string
-      registry-url:
+      podman-registry:
         required: false
         default: docker.io
         type: string
-      registry-username:
+      podman-username:
         required: false
         type: string
       docker-hub-login:
@@ -53,16 +57,19 @@ jobs:
       group: "${{ github.workflow }}-${{ github.head_ref }}"
       cancel-in-progress: true
     if: (!contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref))
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder2__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder__.yaml@main
     with:
       build-image: ${{ inputs.build-image }}
       component: ${{ inputs.component }}
       workingdir: ${{ inputs.workingdir }}
       img-name: ${{ inputs.img-name }}
       artefact: ${{ inputs.artefact }}
+      github-api-auth: ${{ inputs.github-api-auth }}
       fail-on: ${{ inputs.fail-on }}
-      registry-url: ${{ inputs.registry-url }}
-      registry-username: ${{ inputs.registry-username }}
+      cache-registry: ${{ inputs.cache-registry }}
+      podman-registry: ${{ inputs.podman-registry }}
+      podman-username: ${{ inputs.podman-username }}
+      docker-hub-login: ${{ inputs.docker-hub-login }}
       release: false
     secrets:
       git-token: ${{ secrets.git-token }}
@@ -74,7 +81,7 @@ jobs:
       group: "${{ github.ref }}"
       cancel-in-progress: true
     if: contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref)
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder2__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder__.yaml@main
     with:
       build-image: ${{ inputs.build-image }}
       component: ${{ inputs.component }}
@@ -84,8 +91,8 @@ jobs:
       github-api-auth: ${{ inputs.github-api-auth }}
       fail-on: ${{ inputs.fail-on }}
       cache-registry: ${{ inputs.cache-registry }}
-      registry-url: ${{ inputs.registry-url }}
-      registry-username: ${{ inputs.registry-username }}
+      podman-registry: ${{ inputs.podman-registry }}
+      podman-username: ${{ inputs.podman-username }}
       docker-hub-login: ${{ inputs.docker-hub-login }}
       release: true
     secrets:
