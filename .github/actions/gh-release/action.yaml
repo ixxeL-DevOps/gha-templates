@@ -49,7 +49,7 @@ runs:
                                               --notes-start-tag=${{ inputs.last-tag }} \
                                               --prerelease=${{ inputs.prerelease }}
         else
-          gh release create ${{ inputs.tag }} --title "Release ${{ inputs.tag }}" \
+          gh release create ${{ inputs.tag }} --title "${{ inputs.tag }}" \
                                               --latest \
                                               --verify-tag=${{ inputs.verify-tag }} \
                                               --target=${{ inputs.target-branch }} \

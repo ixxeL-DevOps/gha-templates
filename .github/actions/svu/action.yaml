@@ -54,14 +54,19 @@ runs:
         echo -e "${CYAN}[ INFO ] > svu version.${BLANK}"
         svu --version
 
+        if [ -n "${{ inputs.component }}" ]
+        then
+          COMPONENT="${{ inputs.component }}-"
+        fi
+
         echo -e "${YELLOW}[ EXECUTING ] > Calculating last and next tag${BLANK}"
-        LAST_TAG=$(svu current --prefix="${{ inputs.component }}v" --pattern='${{ inputs.component }}v*' --directory=${{ inputs.workingdir }})
+        LAST_TAG=$(svu current --prefix="${COMPONENT}v" --pattern='${COMPONENT}v*' --directory=${{ inputs.workingdir }})
         if [ $? -ne 0 ]
         then
           LAST_TAG=""
-          VERSION="${{ inputs.component }}v0.1.0"
+          VERSION="${COMPONENT}v0.1.0"
         else
-          VERSION=$(svu next --prefix="${{ inputs.component }}v" --pattern='${{ inputs.component }}v*' --directory=${{ inputs.workingdir }})
+          VERSION=$(svu next --prefix="${COMPONENT}v" --pattern='${COMPONENT}v*' --directory=${{ inputs.workingdir }})
         fi
 
         echo -e "${CYAN}[ INFO ] > Last tag is ${PURPLE}${LAST_TAG}${BLANK}"
