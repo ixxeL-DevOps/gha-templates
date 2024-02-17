@@ -162,8 +162,8 @@ jobs:
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
-            ${{ inputs.img-name }}:${{ steps.bump-version.outputs.VERSION }}
-            ${{ inputs.img-name }}:latest
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.bump-version.outputs.VERSION }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
 
       - name: GH Release
         id: gh-release
