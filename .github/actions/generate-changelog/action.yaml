@@ -31,7 +31,14 @@ runs:
       if: ${{ inputs.prepare == 'true' }}
       shell: bash
       run: |
-        pip install pyyaml
+        if command -v pip &> /dev/null; then
+          pip install pyyaml
+        elif command -v pip3 &> /dev/null; then
+          pip3 install pyyaml
+        else
+          echo "Error pip/pip3 not found"
+          exit 1
+        fi
       env:
         RED: \033[1;31m
         GREEN: \033[1;32m
