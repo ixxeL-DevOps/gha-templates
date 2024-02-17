@@ -150,7 +150,12 @@ jobs:
       - name: Get last tag
         id: get-last-tag
         run: |
+          set +e
           LAST_TAG=$(svu current --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*')
+          if [ $? -ne 0 ]
+          then
+            LAST_TAG="${{ inputs.component }}-v0.1.0"
+          fi
           echo "Last version $LAST_TAG"
           echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
 
