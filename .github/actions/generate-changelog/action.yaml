@@ -76,7 +76,6 @@ runs:
           for commit in commits:
               for group in groups:
                   regexp = group['regexp']
-                  # print("regexp", regexp)
                   if commit and commit.strip() and bool(re.match(regexp, commit)):
                       print(f"found commit {commit} in group {group['title']}")
                       classified_commits[group['title']].append(commit)
@@ -101,8 +100,6 @@ runs:
                       match = re.match(pattern, commit)
                       if match:
                           sha, rest = match.groups()
-                          print("sha", sha)
-                          print("rest", rest)
                           rest = replace_pull_requests(rest, "${{ github.server_url }}/${{ github.repository }}")
                           markdown += f"* {sha}: {rest}\n"
                   markdown += "\n"
@@ -119,9 +116,6 @@ runs:
 
           # Récupérer les commits entre les tags spécifiés
           commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s'])
-          # print(f"Commits between {lower_tag} and {upper_tag}:")
-          # for commit in commits:
-          #     print(commit)
 
           with open(config_file, 'r') as config_file:
               config = yaml.load(config_file, Loader=yaml.FullLoader)
