@@ -11,15 +11,6 @@ on:
         required: false
     inputs:
       # General
-      release:
-        description: If release is true, will enable full workflow to push and release
-        required: false
-        default: false
-        type: boolean
-      release-target-branch:
-        required: false
-        default: ${{ github.ref_name }}
-        type: string
       build-image:
         required: false
         default: ixxel/toolbox:builder-latest
@@ -45,42 +36,7 @@ on:
       component:
         required: false
         type: string
-        # Checkov
-      artefact:
-        required: true
-        type: string
-      compact:
-        required: false
-        default: true
-        type: boolean
-      quiet:
-        required: false
-        default: false
-        type: boolean
-      no-guide:
-        required: false
-        default: false
-        type: boolean
-      format:
-        required: false
-        default: cli
-        type: string
-      threshold:
-        required: false
-        default: critical
-        type: string
-      soft-fail:
-        required: false
-        default: true
-        type: boolean
-      gate:
-        required: false
-        default: "50"
-        type: string
-      # podman login
-      podman-docker:
-        required: false
-        type: boolean
+      # docker login
       docker-config:
         required: false
         default: true
@@ -97,39 +53,11 @@ on:
       tls-verify:
         required: false
         type: boolean
-      podman-verbose:
-        required: false
-        default: true
-        type: boolean
-      docker-hub-login:
-        required: false
-        default: true
-        type: boolean
       # buildkit
-      oci-worker-snapshotter:
-        required: false
-        default: fuse-overlayfs
-        type: string
-      dockerfile-frontend:
-        required: false
-        default: dockerfile.v0
-        type: string
       dockerfile-name:
         required: false
         default: Dockerfile
         type: string
-      compression-format:
-        required: false
-        default: tar
-        type: string
-      buildkit-inline-buildinfo-attrs:
-        required: false
-        default: true
-        type: boolean
-      buildkit-inline-cache:
-        required: false
-        default: true
-        type: boolean
       caching:
         required: false
         default: true
@@ -142,37 +70,6 @@ on:
         required: false
         default: true
         type: boolean
-      # Grype
-      transport:
-        description: transport type for destination (docker,docker-archive,oci-dir,oci-archive,dir,sbom,registry)
-        required: false
-        default: docker-archive
-        type: string
-      fail-on:
-        description: set the return code to 1 if a vulnerability is found with a severity >= the given severity
-        required: false
-        default: critical
-        type: string
-      output:
-        description: report output formatter, formats=[json table cyclonedx template]
-        required: false
-        default: table
-        type: string
-      scope:
-        description: selection of layers to analyze, options=[Squashed AllLayers]
-        required: false
-        default: Squashed
-        type: string
-      template:
-        description: specify the path to a Go template file (requires template output to be selected)
-        required: false
-        default: '""'
-        type: string
-      verbose:
-        description: increase verbosity (-v = info, -vv = debug)
-        required: false
-        default: ""
-        type: string
       # git tag
       git-workdir:
         required: false
@@ -270,7 +167,6 @@ jobs:
 
       - name: GH Release
         id: gh-release
-        if: inputs.release
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.bump-version.outputs.VERSION }}
