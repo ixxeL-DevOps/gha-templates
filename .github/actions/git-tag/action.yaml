@@ -80,7 +80,7 @@ runs:
         else
           git -C ${{ inputs.git-workdir }} tag -a ${{ inputs.tag-value }} ${{ inputs.commit-sha }} -m "${TAG_MSG}"
         fi
-        git -C ${{ inputs.git-workdir }} push origin ${{ inputs.tag-value }} --push-option ${{ inputs.push-option }}
+        git -C ${{ inputs.git-workdir }} push origin ${{ inputs.tag-value }} --push-option "${{ inputs.push-option }}"
 
         if [ $? -eq 0 ]
         then
