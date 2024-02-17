@@ -1,4 +1,4 @@
-## Changelog
-### 🐞 Bug fixes
-* 896e86551f62dceea6ba5132b609b60a5744b247: fix: update docker release with changelog
+# CHANGELOG
 
+
+## Release v0.1.0 - 2024-02-17
