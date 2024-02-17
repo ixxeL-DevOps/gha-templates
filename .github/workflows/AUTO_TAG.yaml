@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - .github/**
+  workflow_dispatch:
 jobs:
   auto-tag-repo:
     uses: ixxeL-DevOps/gha-templates/.github/workflows/__auto-tag__.yaml@main
