@@ -151,13 +151,13 @@ jobs:
           node-version: ${{ inputs.node-version }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.2.1
         with:
           git-workdir: ${{ inputs.git-workdir }}
       - name: Release version with Vault
         id: release-it-vault
         if: inputs.vault-enabled == true
-        uses: ixxeL-DevOps/gha-templates/.github/actions/release-it@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/release-it@v0.2.1
         with:
           increment-type: ${{ inputs.increment-type }}
           git-tag: ${{ inputs.git-tag }}
@@ -176,7 +176,7 @@ jobs:
       - name: Release version
         id: release-it
         if: inputs.vault-enabled == false
-        uses: ixxeL-DevOps/gha-templates/.github/actions/release-it@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/release-it@v0.2.1
         with:
           increment-type: ${{ inputs.increment-type }}
           git-tag: ${{ inputs.git-tag }}
