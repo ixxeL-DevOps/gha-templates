@@ -93,7 +93,7 @@ runs:
 
           return re.sub(r'\(#(\d+)\)$', replace, message)
 
-        def generate_markdown(classified_commits):
+        def generate_markdown(classified_commits, lower_tag, upper_tag, repo_url):
           markdown = "## Changelog\n"
           pattern = '^([a-f0-9]+) (.+)$'
 
@@ -104,15 +104,17 @@ runs:
                       match = re.match(pattern, commit)
                       if match:
                           sha, rest = match.groups()
-                          rest = replace_pull_requests(rest, "${{ github.server_url }}/${{ github.repository }}")
+                          rest = replace_pull_requests(rest, repo_url)
                           markdown += f"* {sha}: {rest}\n"
                   markdown += "\n"
+                  markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
 
           return markdown
 
         def main():
           lower_tag = "${{ inputs.lower-tag }}"
           upper_tag = "${{ inputs.upper-tag }}"
+          repo_url = "${{ github.server_url }}/${{ github.repository }}"
 
           config_file = "${{ inputs.config-file }}"
 
@@ -123,7 +125,7 @@ runs:
 
           classified_commits = classify_commits(commits, config['groups'])
 
-          final_markdown = generate_markdown(classified_commits)
+          final_markdown = generate_markdown(classified_commits, lower_tag, upper_tag, repo_url)
 
           print(final_markdown)
 
