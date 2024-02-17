@@ -7,7 +7,11 @@ inputs:
     description: directory in which to find the Dockerfile
     required: false
     default: .
-  release-name:
+  lower-tag:
+    description: Name of the release
+    required: false
+    default: New release
+  upper-tag:
     description: Name of the release
     required: false
     default: New release
@@ -16,6 +20,7 @@ runs:
   using: composite
   steps:
     - id: generate-changelog
+      working-directory: ${{ inputs.workingdir }}
       run: |
         import subprocess
         import yaml
@@ -73,8 +78,8 @@ runs:
 
         def main():
           # Tags de borne inférieure et supérieure
-          lower_tag = "base-v1.0.1"
-          upper_tag = "helm-v0.1.0"
+          lower_tag = ${{ inputs.lower-tag }}
+          upper_tag = ${{ inputs.upper-tag }}
 
           # Fichier de configuration pour le changelog
           config_file = "config.yaml"
