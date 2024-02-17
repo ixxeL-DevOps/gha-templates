@@ -70,7 +70,7 @@ runs:
                           sha, rest = match.groups()
                           print("sha", sha)
                           print("rest", rest)
-                          rest = replace_pull_requests(rest, get_repo_url())
+                          rest = replace_pull_requests(rest, "${{ github.server_url }}/${{ github.repository }}")
                           markdown += f"* {sha}: {rest}\n"
                   markdown += "\n"
 
