@@ -107,8 +107,8 @@ runs:
                           rest = replace_pull_requests(rest, repo_url)
                           markdown += f"* {sha}: {rest}\n"
                   markdown += "\n"
-                  markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
 
+          markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
           return markdown
 
         def main():
