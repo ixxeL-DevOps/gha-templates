@@ -11,6 +11,10 @@ on:
         required: false
     inputs:
       # General
+      release:
+        required: false
+        default: "false"
+        type: string
       build-image:
         required: false
         default: ixxel/toolbox:builder-latest
@@ -94,6 +98,11 @@ on:
         default: false
         type: boolean
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   releasing:
     name: Build
@@ -118,6 +127,7 @@ jobs:
 
       - name: Login to Docker Registry
         uses: docker/login-action@v3
+        if: inputs.release == 'true'
         with:
           registry: ${{ inputs.registry-url }}
           username: ${{ inputs.registry-username }}
@@ -151,8 +161,54 @@ jobs:
           echo "New version $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build and export to Docker
+      - name: Hadolint Dockerfile Scan
+        uses: hadolint/hadolint-action@v3.1.0
+        id: hadolint
+        if: inputs.release == 'false'
+        continue-on-error: true
+        with:
+          dockerfile: ${{ inputs.workingdir }}/Dockerfile
+          verbose: true
+          failure-threshold: info
+
+      - name: Update PR
+        uses: actions/github-script@v6
+        if: inputs.release == 'false' && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `
+            #### Hadolint: \`${{ steps.hadolint.outcome }}\`
+            \`\`\`
+            ${process.env.HADOLINT_RESULTS}
+            \`\`\`
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+      - name: Build Docker img for test
         uses: docker/build-push-action@v5
+        if: inputs.release == 'false'
+        with:
+          context: ${{ inputs.workingdir }}
+          platforms: linux/amd64
+          push: false
+          load: true
+          sbom: false
+          provenance: false
+          build-args: |
+            ${{ inputs.build-arg }}
+          tags: |
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.bump-version.outputs.VERSION }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
+
+      - name: Build and publish Docker img
+        uses: docker/build-push-action@v5
+        if: inputs.release == 'true'
         with:
           context: ${{ inputs.workingdir }}
           platforms: linux/amd64
@@ -168,6 +224,7 @@ jobs:
       - name: GH Release
         id: gh-release
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        if: inputs.release == 'true'
         with:
           tag: ${{ steps.bump-version.outputs.VERSION }}
           target-branch: ${{ github.ref_name }}

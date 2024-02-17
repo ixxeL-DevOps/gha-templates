@@ -24,10 +24,6 @@ on:
       img-name:
         required: false
         type: string
-      artefact:
-        required: false
-        default: Dockerfile
-        type: string
       fail-on:
         required: false
         default: critical
@@ -43,23 +39,17 @@ on:
       registry-username:
         required: false
         type: string
-      docker-hub-login:
-        required: false
-        default: true
-        type: boolean
 jobs:
   docker-test-build:
     concurrency:
-      group: "${{ github.workflow }}-${{ github.head_ref }}"
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     if: (!contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref))
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder2__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__docker-release__.yaml@main
     with:
-      build-image: ${{ inputs.build-image }}
       component: ${{ inputs.component }}
       workingdir: ${{ inputs.workingdir }}
       img-name: ${{ inputs.img-name }}
-      artefact: ${{ inputs.artefact }}
       fail-on: ${{ inputs.fail-on }}
       registry-url: ${{ inputs.registry-url }}
       registry-username: ${{ inputs.registry-username }}
@@ -70,22 +60,19 @@ jobs:
       registry-password: ${{ secrets.DOCKER_IO_PWD }}
   docker-full-build:
     concurrency:
-      group: "${{ github.ref }}"
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     if: contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref)
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder2__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__docker-release__.yaml@main
     with:
-      build-image: ${{ inputs.build-image }}
       component: ${{ inputs.component }}
       workingdir: ${{ inputs.workingdir }}
       img-name: ${{ inputs.img-name }}
-      artefact: ${{ inputs.artefact }}
       fail-on: ${{ inputs.fail-on }}
       cache-registry: ${{ inputs.cache-registry }}
       registry-url: ${{ inputs.registry-url }}
       registry-username: ${{ inputs.registry-username }}
-      docker-hub-login: ${{ inputs.docker-hub-login }}
-      release: true
+      release: false
     secrets:
       git-token: ${{ secrets.git-token }}
       docker-io-pwd: ${{ secrets.DOCKER_IO_PWD }}
