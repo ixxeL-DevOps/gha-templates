@@ -154,7 +154,7 @@ jobs:
           LAST_TAG=$(svu current --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*' --directory=${{ inputs.workingdir }})
           if [ $? -ne 0 ]
           then
-            LAST_TAG="${{ inputs.component }}-v0.1.0"
+            LAST_TAG=""
             VERSION="${{ inputs.component }}-v0.1.0"
           else
             VERSION=$(svu next --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*' --directory=${{ inputs.workingdir }})
