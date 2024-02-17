@@ -94,22 +94,22 @@ runs:
           return re.sub(r'\(#(\d+)\)$', replace, message)
 
         def generate_markdown(classified_commits, lower_tag, upper_tag, repo_url):
-          markdown = "## Changelog\n"
-          pattern = '^([a-f0-9]+) (.+)$'
+            markdown = "## Changelog\n"
+            pattern = '^([a-f0-9]+) (.+) @(.+)$'
 
-          for title, commits in classified_commits.items():
-              if commits:
-                  markdown += f"### {title}\n"
-                  for commit in commits:
-                      match = re.match(pattern, commit)
-                      if match:
-                          sha, rest, author = match.groups()
-                          rest = replace_pull_requests(rest, repo_url)
-                          markdown += f"* {sha}: {rest} by ({author})\n"
-                  markdown += "\n"
+            for title, commits in classified_commits.items():
+                if commits:
+                    markdown += f"### {title}\n"
+                    for commit in commits:
+                        match = re.match(pattern, commit)
+                        if match:
+                            sha, rest, author = match.groups()
+                            rest = replace_pull_requests(rest, repo_url)
+                            markdown += f"* {sha}: {rest} (@{author})\n"
+                    markdown += "\n"
 
-          markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
-          return markdown
+            markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
+            return markdown
 
         def main():
           lower_tag = "${{ inputs.lower-tag }}"
@@ -118,7 +118,7 @@ runs:
 
           config_file = "${{ inputs.config-file }}"
 
-          commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s %an'])
+          commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s @%an'])
 
           with open(config_file, 'r') as config_file:
               config = yaml.load(config_file, Loader=yaml.FullLoader)
