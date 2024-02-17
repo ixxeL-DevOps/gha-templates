@@ -113,7 +113,8 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
-          release-name: ${{ steps.bump-version.outputs.VERSION }}
+          lower-tag: ${{ steps.get-last-tag.outputs.LAST_TAG != '' && steps.get-last-tag.outputs.LAST_TAG || '' }}
+          upper-tag: ${{ steps.bump-version.outputs.VERSION }}
       - name: Git push
         id: git-push
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
