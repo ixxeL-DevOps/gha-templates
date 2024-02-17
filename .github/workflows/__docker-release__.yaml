@@ -133,28 +133,11 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
-      - name: Install svu
-        run: |
-          wget https://github.com/caarlos0/svu/releases/download/v1.12.0/svu_1.12.0_linux_amd64.tar.gz
-          tar -xzvf svu_1.12.0_linux_amd64.tar.gz
-          chmod +x svu
-          mv svu /usr/local/bin/
-      - name: Get last tag and new version
+      - name: Calculate last and next tag
         id: svu
-        run: |
-          set +e
-          LAST_TAG=$(svu current --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*' --directory=${{ inputs.workingdir }})
-          if [ $? -ne 0 ]
-          then
-            LAST_TAG=""
-            VERSION="${{ inputs.component }}-v0.1.0"
-          else
-            VERSION=$(svu next --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*' --directory=${{ inputs.workingdir }})
-          fi
-          echo "Last version $LAST_TAG"
-          echo "New version $VERSION"
-          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
         id: hadolint

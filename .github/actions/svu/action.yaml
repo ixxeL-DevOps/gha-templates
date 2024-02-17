@@ -64,8 +64,8 @@ runs:
           VERSION=$(svu next --prefix="${{ inputs.component }}v" --pattern='${{ inputs.component }}v*' --directory=${{ inputs.workingdir }})
         fi
 
-        echo -e "${YELLOW}[ INFO ] > Last tag is ${PURPLE}${LAST_TAG}${BLANK}"
-        echo -e "${YELLOW}[ INFO ] > New tag is ${PURPLE}${VERSION}${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Last tag is ${PURPLE}${LAST_TAG}${BLANK}"
+        echo -e "${CYAN}[ INFO ] > New tag is ${PURPLE}${VERSION}${BLANK}"
         echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
       shell: bash
