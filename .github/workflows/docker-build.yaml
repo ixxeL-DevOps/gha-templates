@@ -66,7 +66,6 @@ jobs:
       release: false
     secrets:
       git-token: ${{ secrets.git-token }}
-      github-api-rest-token: ${{ secrets.GH_API_TOKEN }}
       docker-io-pwd: ${{ secrets.DOCKER_IO_PWD }}
       registry-password: ${{ secrets.DOCKER_IO_PWD }}
   docker-full-build:
@@ -81,7 +80,6 @@ jobs:
       workingdir: ${{ inputs.workingdir }}
       img-name: ${{ inputs.img-name }}
       artefact: ${{ inputs.artefact }}
-      github-api-auth: ${{ inputs.github-api-auth }}
       fail-on: ${{ inputs.fail-on }}
       cache-registry: ${{ inputs.cache-registry }}
       registry-url: ${{ inputs.registry-url }}
@@ -90,6 +88,5 @@ jobs:
       release: true
     secrets:
       git-token: ${{ secrets.git-token }}
-      github-api-rest-token: ${{ secrets.GH_API_TOKEN }}
       docker-io-pwd: ${{ secrets.DOCKER_IO_PWD }}
       registry-password: ${{ secrets.DOCKER_IO_PWD }}
