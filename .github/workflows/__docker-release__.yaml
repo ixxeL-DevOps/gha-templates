@@ -232,6 +232,6 @@ jobs:
           tag: ${{ steps.svu.outputs.VERSION }}
           target-branch: ${{ github.ref_name }}
           verify-tag: ${{ inputs.release-verify-tag }}
-          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG }}
+          last-tag: ${{ steps.svu.outputs.LAST_TAG }}
         env:
           GH_TOKEN: ${{ github.token }}
