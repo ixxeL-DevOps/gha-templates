@@ -147,23 +147,21 @@ jobs:
           chmod +x svu
           mv svu /usr/local/bin/
 
-      - name: Get last tag
-        id: get-last-tag
+      - name: Get last tag and new version
+        id: svu
         run: |
           set +e
-          LAST_TAG=$(svu current --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*')
+          LAST_TAG=$(svu current --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*' --directory=${{ inputs.workingdir }})
           if [ $? -ne 0 ]
           then
             LAST_TAG="${{ inputs.component }}-v0.1.0"
+            VERSION="${{ inputs.component }}-v0.1.0"
+          else
+            VERSION=$(svu next --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*' --directory=${{ inputs.workingdir }})
           fi
           echo "Last version $LAST_TAG"
-          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
-
-      - name: Calculate new version
-        id: bump-version
-        run: |
-          VERSION=$(svu next --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*')
           echo "New version $VERSION"
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Hadolint Dockerfile Scan
@@ -208,7 +206,7 @@ jobs:
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.bump-version.outputs.VERSION }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.VERSION }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
 
       - name: Build and publish Docker img
@@ -223,7 +221,7 @@ jobs:
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.bump-version.outputs.VERSION }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.VERSION }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
 
       - name: GH Release
@@ -231,7 +229,7 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         if: inputs.release == 'true'
         with:
-          tag: ${{ steps.bump-version.outputs.VERSION }}
+          tag: ${{ steps.svu.outputs.VERSION }}
           target-branch: ${{ github.ref_name }}
           verify-tag: ${{ inputs.release-verify-tag }}
           last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG }}
