@@ -105,7 +105,7 @@ runs:
                         if match:
                             sha, rest, author = match.groups()
                             rest = replace_pull_requests(rest, repo_url)
-                            markdown += f"* {sha}: {rest} (@{author})\n"
+                            markdown += f"* {sha}: {rest} by (@{author})\n"
                     markdown += "\n"
 
             markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
