@@ -130,12 +130,12 @@ jobs:
           logout: false
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.10.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
       - name: Calculate last and next tag
         id: svu
-        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@v0.10.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
         with:
           workingdir: ${{ inputs.workingdir }}
           component: ${{ inputs.component }}
@@ -201,7 +201,7 @@ jobs:
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
       - name: Git tag
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.10.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         if: inputs.release == 'true'
         with:
           tag-value: ${{ steps.svu.outputs.VERSION }}
