@@ -177,6 +177,7 @@ jobs:
           load: true
           sbom: false
           provenance: false
+          cache-from: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
@@ -191,6 +192,8 @@ jobs:
           push: true
           sbom: false
           provenance: false
+          cache-from: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache
+          cache-to: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache,mode=max
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
