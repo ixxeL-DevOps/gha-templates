@@ -250,12 +250,12 @@ jobs:
           token: ${{ secrets.git-admin-token }}
       - name: Helm linting
         id: helm-lint
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-lint@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-lint@v0.7.0
         with:
           workingdir: ${{ inputs.workingdir }}
       - name: Detect bump
         id: detect-bump
-        uses: ixxeL-DevOps/gha-templates/.github/actions/detect-bump@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/detect-bump@v0.7.0
         with:
           release-regex: '\s*:package: CI release of helm chart ${{ env.COMPONENT_NAME }}.+'
           minor-regex: ^(feat(\/|-)[[:alnum:]_.-]+-\(${{ env.COMPONENT_NAME }}\).*)$
@@ -263,14 +263,14 @@ jobs:
           searching-deepness: 20
       - name: Bump version
         id: bump-version
-        uses: ixxeL-DevOps/gha-templates/.github/actions/bump-version@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/bump-version@v0.7.0
         with:
           update: ${{ inputs.auto-update-chart }}
           increment: ${{ steps.detect-bump.outputs.BUMP_KIND }}
           current-version: ${{ steps.helm-lint.outputs.CHART_VERSION }}
       - name: Helm Checkov scan
         id: helm-checkov
-        uses: ixxeL-DevOps/gha-templates/.github/actions/checkov@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/checkov@v0.7.0
         with:
           workingdir: ${{ inputs.workingdir }}
           artefact: ${{ inputs.checkov-artefact }}
@@ -289,14 +289,14 @@ jobs:
       - name: "\U0001F9EA Helm Unit testing"
         id: helm-unittest
         if: inputs.enable-unittests == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-unittest@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-unittest@v0.7.0
         with:
           workingdir: ${{ inputs.workingdir }}
           with-subchart: ${{ inputs.helm-with-subchart }}
           tests-dir: ${{ inputs.helm-tests-dir }}
       - name: Helm Templating
         id: helm-template
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@v0.7.0
         with:
           workingdir: ${{ inputs.workingdir }}
           strict: ${{ inputs.helm-strict }}
@@ -309,14 +309,14 @@ jobs:
           output-file: ${{ inputs.helm-output-file }}
       - name: Helm Kubeconform
         id: helm-kubeconform
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-kubeconform@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-kubeconform@v0.7.0
         with:
           workingdir: ${{ inputs.workingdir }}
           values-file: ${{ inputs.helm-values-file-test }}
           plugin-version: ${{ inputs.helm-kubeconform-version }}
       - name: Helm Packaging
         id: helm-package
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-package@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-package@v0.7.0
         with:
           workingdir: ${{ inputs.workingdir }}
           chart-name: ${{ steps.helm-lint.outputs.CHART_NAME }}
@@ -326,7 +326,7 @@ jobs:
       - name: Helm pushing
         id: helm-push
         if: inputs.release
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-push@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-push@v0.7.0
         with:
           workingdir: ${{ inputs.workingdir }}
           chart-name: ${{ steps.helm-lint.outputs.CHART_NAME }}
@@ -344,7 +344,7 @@ jobs:
       - name: Chart update
         id: chart-update
         if: (inputs.auto-update-chart == 'true') && (inputs.release)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/chart-update@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/chart-update@v0.7.0
         with:
           workingdir: ${{ inputs.workingdir }}
           evaluate-update: ${{ inputs.evaluate-update }}
@@ -352,26 +352,26 @@ jobs:
       - name: Helm docs
         id: helm-docs
         if: (inputs.auto-update-chart == 'true') && (inputs.release)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-docs@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-docs@v0.7.0
         with:
           chart-search-root: ${{ inputs.workingdir }}
       - name: Git config
         id: git-config
         if: (inputs.auto-update-chart == 'true') && (inputs.release)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.7.0
         with:
           git-workdir: ${{ inputs.git-workdir }}
       - name: Update changelog
         id: changelog
         if: (inputs.auto-update-chart == 'true') && (inputs.release)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@v0.7.0
         with:
           workingdir: ${{ inputs.workingdir }}
           release-name: ${{ steps.bump-version.outputs.VERSION }}
       - name: Git push
         id: git-push
         if: (inputs.auto-update-chart == 'true') && (inputs.release)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v0.7.0
         with:
           git-token: ${{ secrets.PAT }}
           git-msg: ":package: CI release of helm chart ${{ env.COMPONENT_NAME }} version ${{ steps.bump-version.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
@@ -381,7 +381,7 @@ jobs:
       - name: "\U0001F680 GH Release"
         id: gh-release
         if: (inputs.auto-tag-repo == 'true') && (inputs.auto-update-chart == 'true') && (inputs.release)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.7.0
         with:
           tag: ${{ env.COMPONENT_NAME }}-${{ steps.bump-version.outputs.VERSION }}
           verify-tag: ${{ inputs.release-verify-tag }}
