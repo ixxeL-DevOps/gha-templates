@@ -227,7 +227,7 @@ jobs:
           fetch-depth: "0"
       - name: Set version
         id: set-version
-        uses: ixxeL-DevOps/gha-templates/.github/actions/set-version@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/set-version@v0.9.5
         with:
           component: ${{ inputs.component }}
       - name: Set variables
@@ -241,7 +241,7 @@ jobs:
       - name: Podman login
         id: podman-login
         if: ${{ inputs.podman-registry != null }}
-        uses: ixxeL-DevOps/gha-templates/.github/actions/podman-login@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/podman-login@v0.9.5
         with:
           podman-docker: ${{ inputs.podman-docker }}
           docker-config: ${{ inputs.docker-config }}
@@ -253,7 +253,7 @@ jobs:
           docker-hub-login: ${{ inputs.docker-hub-login }}
       - name: Buildkit build
         id: buildkit-build
-        uses: ixxeL-DevOps/gha-templates/.github/actions/buildkit@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/buildkit@v0.9.5
         with:
           workingdir: ${{ inputs.workingdir }}
           img-name: ${{ inputs.img-name }}
@@ -271,7 +271,7 @@ jobs:
           oci-worker-snapshotter: ${{ inputs.oci-worker-snapshotter }}
       - name: Grype scan
         id: grype-scan
-        uses: ixxeL-DevOps/gha-templates/.github/actions/grype@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/grype@v0.9.5
         continue-on-error: true
         with:
           image-ref: ${{ inputs.target-dir }}/${{ inputs.img-name }}.tar
@@ -284,13 +284,13 @@ jobs:
       - name: Git config
         id: git-config
         if: contains( github.ref, 'release' ) || contains( github.base_ref, 'release' )
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.9.5
         with:
           git-workdir: ${{ inputs.git-workdir }}
       - name: git tag
         id: git-tag
         if: contains( github.ref, 'release' ) || contains( github.base_ref, 'release' )
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.9.5
         with:
           tag-msg: "CI release of ${{ inputs.component }} version ${{ steps.set-version.outputs.PROJECT_SHORT_VERSION }}"
           tag-value: ${{ steps.set-version.outputs.PROJECT_SHORT_VERSION }}
