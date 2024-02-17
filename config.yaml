@@ -1,0 +1,20 @@
+---
+groups:
+  - title: "📦 Dependency updates"
+    regexp: '^.*?chore(?:\(\w+\))?: .+$'
+    order: 300
+  - title: "🚀 New Features"
+    regexp: '^.*?feat(?:\(\w+\))?: .+$'
+    order: 100
+  - title: "⚠️ Security updates"
+    regexp: '^.*?sec(?:\(\w+\))?: .+$'
+    order: 150
+  - title: "🐞 Bug fixes"
+    regexp: '^.*?(fix|refactor)(?:\(\w+\))?: .+$'
+    order: 200
+  - title: "📚 Documentation updates"
+    regexp: '^.*?docs?(?:\(\w+\))?: .+$'
+    order: 400
+  - title: "🏗️ Build process updates"
+    regexp: '^.*?(build|ci)(?:\(\w+\))?: .+$'
+    order: 400
