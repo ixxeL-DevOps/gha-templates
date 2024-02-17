@@ -103,9 +103,9 @@ runs:
                   for commit in commits:
                       match = re.match(pattern, commit)
                       if match:
-                          sha, rest = match.groups()
+                          sha, rest, author = match.groups()
                           rest = replace_pull_requests(rest, repo_url)
-                          markdown += f"* {sha}: {rest}\n"
+                          markdown += f"* {sha}: {rest} by ({author})\n"
                   markdown += "\n"
 
           markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
@@ -118,7 +118,7 @@ runs:
 
           config_file = "${{ inputs.config-file }}"
 
-          commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s'])
+          commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s %an'])
 
           with open(config_file, 'r') as config_file:
               config = yaml.load(config_file, Loader=yaml.FullLoader)
