@@ -98,11 +98,9 @@ on:
         default: false
         type: boolean
   workflow_dispatch:
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   releasing:
     name: Build
@@ -118,13 +116,10 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Login to Docker Registry
         uses: docker/login-action@v3
         if: inputs.release == 'true'
@@ -133,20 +128,17 @@ jobs:
           username: ${{ inputs.registry-username }}
           password: ${{ secrets.registry-password }}
           logout: false
-
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.5.2
         with:
           git-workdir: ${{ inputs.git-workdir }}
-
       - name: Install svu
         run: |
           wget https://github.com/caarlos0/svu/releases/download/v1.12.0/svu_1.12.0_linux_amd64.tar.gz
           tar -xzvf svu_1.12.0_linux_amd64.tar.gz
           chmod +x svu
           mv svu /usr/local/bin/
-
       - name: Get last tag and new version
         id: svu
         run: |
@@ -163,7 +155,6 @@ jobs:
           echo "New version $VERSION"
           echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
         id: hadolint
@@ -173,7 +164,6 @@ jobs:
           dockerfile: ${{ inputs.workingdir }}/Dockerfile
           verbose: true
           failure-threshold: info
-
       - name: Update PR
         uses: actions/github-script@v6
         if: inputs.release == 'false' && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
@@ -208,7 +198,6 @@ jobs:
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.VERSION }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
-
       - name: Build and publish Docker img
         uses: docker/build-push-action@v5
         if: inputs.release == 'true'
@@ -223,10 +212,9 @@ jobs:
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.VERSION }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
-
       - name: GH Release
         id: gh-release
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.5.2
         if: inputs.release == 'true'
         with:
           tag: ${{ steps.svu.outputs.VERSION }}
