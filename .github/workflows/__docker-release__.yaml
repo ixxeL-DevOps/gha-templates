@@ -224,6 +224,15 @@ jobs:
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.VERSION }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
 
+      - name: Update changelog
+        id: changelog
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
+        if: inputs.release == 'true'
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          lower-tag: ${{ steps.svu.outputs.LAST_TAG }}
+          upper-tag: ${{ github.sha }}
+
       - name: GH Release
         id: gh-release
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
@@ -233,5 +242,7 @@ jobs:
           target-branch: ${{ github.ref_name }}
           verify-tag: ${{ inputs.release-verify-tag }}
           last-tag: ${{ steps.svu.outputs.LAST_TAG }}
+          auto-changelog: "false"
+          notes-file: ${{ inputs.workingdir }}/CHANGELOG.md
         env:
           GH_TOKEN: ${{ github.token }}
