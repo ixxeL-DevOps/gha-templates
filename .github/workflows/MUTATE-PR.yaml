@@ -6,6 +6,6 @@ on:
       - opened
 jobs:
   update-pr:
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__update-PR-classic__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__update-PR-classic__.yaml@v0.4.4
     secrets:
       git-token: ${{ secrets.PAT }}
