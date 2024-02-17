@@ -214,10 +214,13 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -225,30 +228,35 @@ jobs:
           username: ${{ inputs.registry-username }}
           password: ${{ secrets.registry-password }}
           logout: false
+
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.4.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
+
       - name: Get last tag
         id: get-last-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.4.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         with:
           git-workdir: ${{ inputs.workingdir }}
           pattern: "${{ inputs.component }}-v[0-9]*.[0-9]*.[0-9]*"
           starting-tag: ""
           branch: ${{ inputs.release-target-branch }}
+
       - name: Install svu
         run: |
           wget https://github.com/caarlos0/svu/releases/download/v1.12.0/svu_1.12.0_linux_amd64.tar.gz
           tar -xzvf svu_1.12.0_linux_amd64.tar.gz
           chmod +x svu
           mv svu /usr/local/bin/
+
       - name: Detect bump
         id: bump-version
         run: |
           VERSION=$(svu n --prefix="${{ inputs.component }}-v" --pattern='${{ inputs.component }}-v*')
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build and export to Docker
         uses: docker/build-push-action@v5
         with:
