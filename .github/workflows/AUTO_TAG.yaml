@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 jobs:
   auto-tag-repo:
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__auto-tag__.yaml@v0.6.3
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__auto-tag__.yaml@main
     with:
       git-workdir: .github
     secrets:
