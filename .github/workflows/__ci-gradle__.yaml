@@ -207,7 +207,7 @@ jobs:
             })
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -243,25 +243,25 @@ jobs:
           build-root-directory: ${{ inputs.workingdir }}
           cache-overwrite-existing: true
       - name: Unit tests (Gradlew)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
           cmd: "clean check"
       - name: Jacoco code coverage (Gradlew)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
           cmd: "jacocoTestReport"
       - name: Find Jacoco report
         id: prepare-lcov
-        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
         with:
           workingdir: ${{ inputs.workingdir }}
           search-name: jacoco.xml
           destination: jacoco-unit.xml
       - name: Sonarqube report (Gradlew)
         if: inputs.sonar-tu-only == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
           cmd: "sonarqube -Dsonar.token=${{ secrets.sonar-token }} -Dsonar.scm.revision=${{ github.ref }} -Dsonar.coverage.jacoco.xmlReportPaths=jacoco-unit.xml"
@@ -275,7 +275,7 @@ jobs:
           path: ${{ inputs.workingdir }}/jacoco-unit.xml
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -313,20 +313,20 @@ jobs:
           cache-overwrite-existing: true
       - name: Acceptance tests (Gradlew)
         id: acceptance
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
           cmd: "acceptance"
       - name: Jacoco code coverage (Gradlew)
         if: inputs.sonar-tu-only == 'false'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
           cmd: "jacocoTestReport"
       - name: Find Jacoco report
         if: inputs.sonar-tu-only == 'false'
         id: prepare-lcov
-        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
         with:
           workingdir: ${{ inputs.workingdir }}
           search-name: jacoco.xml
@@ -381,7 +381,7 @@ jobs:
           REPORTS_BASE_URL: ${{ inputs.gcs-reports-base-url }}
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -417,20 +417,20 @@ jobs:
           build-root-directory: ${{ inputs.workingdir }}
           cache-overwrite-existing: true
       - name: Integration tests (Gradlew)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
           cmd: "integration"
       - name: Jacoco code coverage (Gradlew)
         if: inputs.sonar-tu-only == 'false'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
           cmd: "jacocoTestReport"
       - name: Find Jacoco report
         if: inputs.sonar-tu-only == 'false'
         id: prepare-lcov
-        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
         with:
           workingdir: ${{ inputs.workingdir }}
           search-name: jacoco.xml
@@ -443,7 +443,7 @@ jobs:
           path: ${{ inputs.workingdir }}/jacoco-integration.xml
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -477,7 +477,7 @@ jobs:
           service_account: ${{ inputs.service_account }}
       - name: GCloud GAR Authentication
         id: gcloud-gar-auth
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
         with:
           registry: ${{ inputs.gcp-base-url }}
       - name: "\U0001F418 Setup Gradle"
@@ -487,7 +487,7 @@ jobs:
           build-root-directory: ${{ inputs.workingdir }}
           cache-overwrite-existing: true
       - name: "\U0001F4E6 Build code (Gradlew)"
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
           cmd: "clean bootJar"
@@ -496,7 +496,7 @@ jobs:
         uses: tj-actions/branch-names@v7
       - name: Define Tag
         id: define-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@main
         with:
           current-branch: ${{ steps.branch-name.outputs.default_branch }}
           repo-style: ${{ inputs.repo-style }}
@@ -549,7 +549,7 @@ jobs:
             ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:latest
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -588,7 +588,7 @@ jobs:
         with:
           path: ${{ inputs.workingdir }}/build/jacoco
       - name: Sonarqube report (Gradlew)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gradlew@main
         with:
           workingdir: ${{ inputs.workingdir }}
           cmd: "sonarqube -Dsonar.token=${{ secrets.sonar-token }} -Dsonar.scm.revision=${{ github.ref }} -Dsonar.coverage.jacoco.xmlReportPaths=build/jacoco/**/*.xml"
@@ -599,7 +599,14 @@ jobs:
     timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    needs: [static-analysis, unit-tests, acceptance-tests, integration-tests, docker-build]
+    needs:
+      [
+        static-analysis,
+        unit-tests,
+        acceptance-tests,
+        integration-tests,
+        docker-build,
+      ]
     permissions:
       id-token: write
       contents: read
@@ -614,18 +621,18 @@ jobs:
         uses: tj-actions/branch-names@v7
       - name: Define Tag
         id: define-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@main
         with:
           current-branch: ${{ steps.branch-name.outputs.current_branch }}
           repo-style: ${{ inputs.repo-style }}
       - name: GCloud GAR Authentication
         id: gcloud-gar-auth
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
         with:
           registry: ${{ inputs.gcp-base-url }}
       - name: "\U0001F3F7️ GCloud add tag"
         id: gcloud-add-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-add-tag@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-add-tag@main
         with:
           image-fullname: ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}
           src-image-tag: sha-${{ github.sha }}
@@ -635,7 +642,14 @@ jobs:
     timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    needs: [static-analysis, unit-tests, acceptance-tests, integration-tests, docker-build]
+    needs:
+      [
+        static-analysis,
+        unit-tests,
+        acceptance-tests,
+        integration-tests,
+        docker-build,
+      ]
     permissions:
       id-token: write
       contents: read
@@ -669,7 +683,7 @@ jobs:
           token: ${{ secrets.git-admin-token }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.workingdir }}
       - name: Get branch name
@@ -677,14 +691,14 @@ jobs:
         uses: tj-actions/branch-names@v7
       - name: Define Tag
         id: define-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@main
         with:
           current-branch: ${{ steps.branch-name.outputs.current_branch }}
           repo-style: ${{ inputs.repo-style }}
       - name: "\U0001F3F7️ Git tag"
         id: git-tag
         if: inputs.gh-release == 'false'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         with:
           tag-msg: "CI auto Git tag for ${{ steps.define-tag.outputs.TARGET_TAG }}"
           tag-value: ${{ steps.define-tag.outputs.TARGET_TAG }}
@@ -694,7 +708,7 @@ jobs:
       - name: GH Release with Vault
         id: gh-release-vault
         if: inputs.vault-enabled && inputs.gh-release == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.define-tag.outputs.TARGET_TAG }}
           verify-tag: false
@@ -704,7 +718,7 @@ jobs:
       - name: GH Release
         id: gh-release
         if: inputs.vault-enabled == false && inputs.gh-release == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.define-tag.outputs.TARGET_TAG }}
           verify-tag: false
@@ -716,7 +730,14 @@ jobs:
     timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    needs: [static-analysis, unit-tests, acceptance-tests, integration-tests, docker-build]
+    needs:
+      [
+        static-analysis,
+        unit-tests,
+        acceptance-tests,
+        integration-tests,
+        docker-build,
+      ]
     permissions:
       id-token: write
       contents: read
@@ -728,11 +749,11 @@ jobs:
         uses: actions/checkout@v4
       - name: GCloud GAR Authentication
         id: gcloud-gar-auth
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
         with:
           registry: ${{ inputs.gcp-base-url }}
       - name: Delete image from GAR
         id: gcloud-delete-img
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-delete-img@v0.2.2
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-delete-img@main
         with:
           docker-img: ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:sha-${{ github.sha }}
