@@ -24,10 +24,6 @@ on:
       img-name:
         required: false
         type: string
-      fail-on:
-        required: false
-        default: critical
-        type: string
       cache-registry:
         required: false
         default: docker.io/ixxel
@@ -50,7 +46,6 @@ jobs:
       component: ${{ inputs.component }}
       workingdir: ${{ inputs.workingdir }}
       img-name: ${{ inputs.img-name }}
-      fail-on: ${{ inputs.fail-on }}
       registry-url: ${{ inputs.registry-url }}
       registry-username: ${{ inputs.registry-username }}
       release: false
@@ -68,7 +63,6 @@ jobs:
       component: ${{ inputs.component }}
       workingdir: ${{ inputs.workingdir }}
       img-name: ${{ inputs.img-name }}
-      fail-on: ${{ inputs.fail-on }}
       cache-registry: ${{ inputs.cache-registry }}
       registry-url: ${{ inputs.registry-url }}
       registry-username: ${{ inputs.registry-username }}
