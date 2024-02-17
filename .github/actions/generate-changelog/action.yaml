@@ -78,8 +78,8 @@ runs:
 
         def main():
           # Tags de borne inférieure et supérieure
-          lower_tag = ${{ inputs.lower-tag }}
-          upper_tag = ${{ inputs.upper-tag }}
+          lower_tag = "${{ inputs.lower-tag }}"
+          upper_tag = "${{ inputs.upper-tag }}"
 
           # Fichier de configuration pour le changelog
           config_file = "config.yaml"
