@@ -132,6 +132,8 @@ jobs:
           verify-tag: ${{ inputs.release-verify-tag }}
           last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG != '' && steps.get-last-tag.outputs.LAST_TAG || '' }}
           target-branch: ${{ inputs.release-target-branch }}
+          auto-changelog: "false"
+          notes-file: ${{ inputs.workingdir }}/CHANGELOG.md
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Extract tags

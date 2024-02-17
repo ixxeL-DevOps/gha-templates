@@ -21,6 +21,14 @@ inputs:
     required: false
     default: "false"
     description: Mark the release as a prerelease
+  auto-changelog:
+    required: false
+    default: "true"
+    description: Auto changelog generate
+  notes-file:
+    required: false
+    default: "true"
+    description: note file or stdin
 
 runs:
   using: composite
@@ -32,7 +40,23 @@ runs:
         gh --version
 
         echo -e "${YELLOW}[ EXECUTING ] > Releasing on tag ${{ inputs.tag }}${BLANK}"
-        gh release create ${{ inputs.tag }} --generate-notes --latest --verify-tag=${{ inputs.verify-tag }} --target=${{ inputs.target-branch }} --notes-start-tag=${{ inputs.last-tag }} --prerelease=${{ inputs.prerelease }}
+        if [[ "${{ inputs.auto-changelog }}" == "true" ]]
+        then
+          gh release create ${{ inputs.tag }} --generate-notes \
+                                              --latest \
+                                              --verify-tag=${{ inputs.verify-tag }} \
+                                              --target=${{ inputs.target-branch }} \
+                                              --notes-start-tag=${{ inputs.last-tag }} \
+                                              --prerelease=${{ inputs.prerelease }}
+        else
+          gh release create ${{ inputs.tag }} --title "Release ${{ inputs.tag }}" \
+                                              --latest \
+                                              --verify-tag=${{ inputs.verify-tag }} \
+                                              --target=${{ inputs.target-branch }} \
+                                              --notes-start-tag=${{ inputs.last-tag }} \
+                                              --prerelease=${{ inputs.prerelease }} \
+                                              --notes-file=${{ inputs.notes-file }}
+        fi
       shell: bash
       env:
         RED: \033[1;31m
