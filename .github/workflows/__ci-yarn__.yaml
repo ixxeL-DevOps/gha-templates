@@ -219,7 +219,7 @@ jobs:
       - name: "\U0001F4E5 Checkout code"
         uses: actions/checkout@v4
       - name: Node.js and yarn setup
-        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.nodejs-cache }}
@@ -228,7 +228,7 @@ jobs:
           install-args: ${{ inputs.yarn-install-args }}
       - name: Linting
         id: yarn-eslint
-        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
         with:
           workingdir: ${{ inputs.workingdir }}
           script: "eslint"
@@ -261,7 +261,7 @@ jobs:
             })
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -283,7 +283,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Node.js and yarn setup
-        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.nodejs-cache }}
@@ -292,13 +292,13 @@ jobs:
           install-args: ${{ inputs.yarn-install-args }}
       - name: Unit tests (Yarn)
         id: unit-tests
-        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
         with:
           workingdir: ${{ inputs.workingdir }}
           script: ${{ inputs.tu-script }}
       - name: Prepare Lcov upload
         id: prepare-lcov
-        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
         with:
           workingdir: ${{ inputs.workingdir }}
           search-name: lcov.info
@@ -347,7 +347,7 @@ jobs:
           process_gcloudignore: false
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -367,7 +367,7 @@ jobs:
       - name: "\U0001F4E5 Checkout code"
         uses: actions/checkout@v4
       - name: Node.js and yarn setup
-        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.nodejs-cache }}
@@ -376,13 +376,13 @@ jobs:
           install-args: ${{ inputs.yarn-install-args }}
       - name: Component tests (Yarn)
         id: component-tests
-        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
         with:
           workingdir: ${{ inputs.workingdir }}
           script: ${{ inputs.ct-script }}
       - name: Prepare Lcov upload
         id: prepare-lcov
-        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
         with:
           workingdir: ${{ inputs.workingdir }}
           search-name: lcov.info
@@ -413,7 +413,7 @@ jobs:
           process_gcloudignore: false
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -433,7 +433,7 @@ jobs:
       - name: "\U0001F4E5 Checkout code"
         uses: actions/checkout@v4
       - name: Node.js and yarn setup
-        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.nodejs-cache }}
@@ -442,13 +442,13 @@ jobs:
           install-args: ${{ inputs.yarn-install-args }}
       - name: Acceptance tests (Yarn)
         id: acceptance-tests
-        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
         with:
           workingdir: ${{ inputs.workingdir }}
           script: ${{ inputs.acceptance-script }}
       - name: Prepare Lcov upload
         id: prepare-lcov
-        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/find-report@main
         with:
           workingdir: ${{ inputs.workingdir }}
           search-name: lcov.info
@@ -479,7 +479,7 @@ jobs:
           process_gcloudignore: false
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -499,11 +499,11 @@ jobs:
         uses: actions/checkout@v4
       - name: GCloud GAR Authentication
         id: gcloud-gar-auth
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
         with:
           registry: ${{ inputs.gcp-base-url }}
       - name: Node.js and yarn setup
-        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/setup-nodejs@main
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.nodejs-cache }}
@@ -512,7 +512,7 @@ jobs:
           install-args: ${{ inputs.yarn-install-args }}
       - name: "\U0001F4E6 Compile code"
         id: yarn-build
-        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/yarn@main
         with:
           workingdir: ${{ inputs.workingdir }}
           script: ${{ inputs.yarn-build-script }}
@@ -521,7 +521,7 @@ jobs:
         uses: tj-actions/branch-names@v7
       - name: Define Tag
         id: define-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@main
         with:
           current-branch: ${{ steps.branch-name.outputs.default_branch }}
           repo-style: ${{ inputs.repo-style }}
@@ -574,7 +574,7 @@ jobs:
             ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:latest
       - name: "\U0001F6AB Cancel workflow run"
         if: failure() && inputs.quick-fail == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-run-cancel@main
         with:
           run-id: ${{ github.run_id }}
         env:
@@ -622,7 +622,14 @@ jobs:
     timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    needs: [static-analysis, unit-tests, component-tests, acceptance-tests, docker-build]
+    needs:
+      [
+        static-analysis,
+        unit-tests,
+        component-tests,
+        acceptance-tests,
+        docker-build,
+      ]
     permissions:
       id-token: write
       contents: read
@@ -637,18 +644,18 @@ jobs:
         uses: tj-actions/branch-names@v7
       - name: Define Tag
         id: define-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@main
         with:
           current-branch: ${{ steps.branch-name.outputs.current_branch }}
           repo-style: ${{ inputs.repo-style }}
       - name: GCloud GAR Authentication
         id: gcloud-gar-auth
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
         with:
           registry: ${{ inputs.gcp-base-url }}
       - name: GCloud add tag
         id: gcloud-add-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-add-tag@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-add-tag@main
         with:
           image-fullname: ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}
           src-image-tag: sha-${{ github.sha }}
@@ -658,7 +665,14 @@ jobs:
     timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    needs: [static-analysis, unit-tests, component-tests, acceptance-tests, docker-build]
+    needs:
+      [
+        static-analysis,
+        unit-tests,
+        component-tests,
+        acceptance-tests,
+        docker-build,
+      ]
     permissions:
       id-token: write
       contents: read
@@ -692,7 +706,7 @@ jobs:
           token: ${{ secrets.git-admin-token }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.workingdir }}
       - name: Get branch name
@@ -700,14 +714,14 @@ jobs:
         uses: tj-actions/branch-names@v7
       - name: Define Tag
         id: define-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/define-tag@main
         with:
           current-branch: ${{ steps.branch-name.outputs.current_branch }}
           repo-style: ${{ inputs.repo-style }}
       - name: Git tag
         id: git-tag
         if: inputs.gh-release == 'false'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         with:
           tag-msg: "CI auto Git tag for ${{ steps.define-tag.outputs.TARGET_TAG }}"
           tag-value: ${{ steps.define-tag.outputs.TARGET_TAG }}
@@ -717,7 +731,7 @@ jobs:
       - name: GH Release with Vault
         id: gh-release-vault
         if: inputs.vault-enabled && inputs.gh-release == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.define-tag.outputs.TARGET_TAG }}
           verify-tag: false
@@ -727,7 +741,7 @@ jobs:
       - name: GH Release
         id: gh-release
         if: inputs.vault-enabled == false && inputs.gh-release == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.define-tag.outputs.TARGET_TAG }}
           verify-tag: false
@@ -739,7 +753,14 @@ jobs:
     timeout-minutes: 6
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    needs: [static-analysis, unit-tests, component-tests, acceptance-tests, docker-build]
+    needs:
+      [
+        static-analysis,
+        unit-tests,
+        component-tests,
+        acceptance-tests,
+        docker-build,
+      ]
     permissions:
       id-token: write
       contents: read
@@ -751,11 +772,11 @@ jobs:
         uses: actions/checkout@v4
       - name: GCloud GAR Authentication
         id: gcloud-gar-auth
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-gar-auth@main
         with:
           registry: ${{ inputs.gcp-base-url }}
       - name: Delete image from GAR
         id: gcloud-delete-img
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-delete-img@v0.4.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gcloud-delete-img@main
         with:
           docker-img: ${{ inputs.docker-target-registry }}/${{ inputs.image-name }}:sha-${{ github.sha }}
