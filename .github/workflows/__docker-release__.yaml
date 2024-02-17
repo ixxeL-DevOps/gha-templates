@@ -204,7 +204,6 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         if: inputs.release == 'true'
         with:
-          workingdir: ${{ inputs.workingdir }}
           tag-value: ${{ steps.svu.outputs.VERSION }}
           commit-sha: ${{ github.sha }}
           git-workdir: ${{ inputs.git-workdir }}
