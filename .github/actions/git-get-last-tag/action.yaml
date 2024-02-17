@@ -23,6 +23,9 @@ outputs:
   LAST_TAG:
     description: last git tag found
     value: ${{ steps.git-get-last-tag.outputs.LAST_TAG }}
+  BEFORE_LAST_TAG:
+    description: last git tag found
+    value: ${{ steps.git-get-last-tag.outputs.BEFORE_LAST_TAG }}
 
 runs:
   using: composite
@@ -52,7 +55,8 @@ runs:
         echo -e "${YELLOW}[ EXECUTING ] > Getting last tag from pattern ${PURPLE}[ ${{ inputs.pattern }} ]${BLANK}"
         # LAST_TAG=$(git -C ${{ inputs.git-workdir }} describe --tags --match ${{ inputs.pattern }} --abbrev=0)
 
-        LAST_TAG=$(git tag --merged ${{ inputs.branch }} | grep -E "${{ inputs.pattern }}" | sort -rV | head -1)
+        LAST_TAG=$(git tag --merged ${{ inputs.branch }} | grep -E "${{ inputs.pattern }}" | sort -V | tail -2 | tail -1)
+        BEFORE_LAST_TAG=$(git tag --merged ${{ inputs.branch }} | grep -E "${{ inputs.pattern }}" | sort -V | tail -2 | tail -1)
 
         if [[ -n "${LAST_TAG}" ]]; then
           echo -e "${CYAN}[ INFO ] > Last tag is ${PURPLE}${LAST_TAG}${BLANK}"
@@ -60,6 +64,7 @@ runs:
           LAST_TAG="${{ inputs.starting-tag }}"
           echo -e "${CYAN}[ INFO ] > No tags found, using default tag ${PURPLE}${LAST_TAG}${BLANK}"
         fi
+        echo "BEFORE_LAST_TAG=$BEFORE_LAST_TAG" >> $GITHUB_OUTPUT
         echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
       shell: bash
       env:
