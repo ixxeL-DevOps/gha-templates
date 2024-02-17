@@ -56,9 +56,10 @@ runs:
         # LAST_TAG=$(git -C ${{ inputs.git-workdir }} describe --tags --match ${{ inputs.pattern }} --abbrev=0)
 
         LAST_TAG=$(git tag --merged ${{ inputs.branch }} | grep -E "${{ inputs.pattern }}" | sort -V | tail -2 | tail -1)
-        BEFORE_LAST_TAG=$(git tag --merged ${{ inputs.branch }} | grep -E "${{ inputs.pattern }}" | sort -V | tail -2 | tail -1)
+        BEFORE_LAST_TAG=$(git tag --merged ${{ inputs.branch }} | grep -E "${{ inputs.pattern }}" | sort -V | tail -2 | head -1)
 
         if [[ -n "${LAST_TAG}" ]]; then
+          echo -e "${CYAN}[ INFO ] > Before last tag is ${PURPLE}${BEFORE_LAST_TAG}${BLANK}"
           echo -e "${CYAN}[ INFO ] > Last tag is ${PURPLE}${LAST_TAG}${BLANK}"
         else
           LAST_TAG="${{ inputs.starting-tag }}"
