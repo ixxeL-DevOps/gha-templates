@@ -57,7 +57,7 @@ jobs:
       group: "${{ github.workflow }}-${{ github.head_ref }}"
       cancel-in-progress: true
     if: (!contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref))
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder__.yaml@v0.5.2
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder__.yaml@main
     with:
       build-image: ${{ inputs.build-image }}
       component: ${{ inputs.component }}
@@ -81,7 +81,7 @@ jobs:
       group: "${{ github.ref }}"
       cancel-in-progress: true
     if: contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref)
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder__.yaml@v0.5.2
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__trunk-img-builder__.yaml@main
     with:
       build-image: ${{ inputs.build-image }}
       component: ${{ inputs.component }}
