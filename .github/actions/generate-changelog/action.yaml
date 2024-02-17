@@ -7,6 +7,10 @@ inputs:
     description: directory in which to find the Dockerfile
     required: false
     default: .
+  install:
+    description: Prepare the job when not running in adequate environment
+    required: false
+    default: "true"
   prepare:
     description: Prepare the job when not running in adequate environment
     required: false
@@ -24,7 +28,7 @@ runs:
   using: composite
   steps:
     - uses: actions/setup-python@v5
-      if: ${{ inputs.prepare == 'true' }}
+      if: ${{ inputs.install == 'true' }}
       with:
         python-version: "3.12"
     - id: prepare
