@@ -1,4 +1,4 @@
 ## Changelog
-### 🚀 New Features
-* bb22730d0764a7a2805668ec1ffdd66002863b1d: feat: svu job
+### 📦 Dependency updates
+* 16659902c8c531837301747184e2bed13b4f277f: chore: config changelog variable
 
