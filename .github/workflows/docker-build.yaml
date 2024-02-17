@@ -46,6 +46,7 @@ jobs:
       component: ${{ inputs.component }}
       workingdir: ${{ inputs.workingdir }}
       img-name: ${{ inputs.img-name }}
+      cache-registry: ${{ inputs.cache-registry }}
       registry-url: ${{ inputs.registry-url }}
       registry-username: ${{ inputs.registry-username }}
       release: false
