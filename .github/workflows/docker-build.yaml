@@ -41,7 +41,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     if: (!contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref))
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__docker-release__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__docker-release__.yaml@v0.10.1
     with:
       component: ${{ inputs.component }}
       workingdir: ${{ inputs.workingdir }}
@@ -59,7 +59,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     if: contains(fromJSON('["refs/heads/master", "refs/heads/main"]'), github.ref)
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__docker-release__.yaml@main
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__docker-release__.yaml@v0.10.1
     with:
       component: ${{ inputs.component }}
       workingdir: ${{ inputs.workingdir }}
