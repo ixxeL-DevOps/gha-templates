@@ -23,6 +23,10 @@ inputs:
     description: Name of the release
     required: false
     default: New release
+  config-file:
+    description: Name of the config changelog
+    required: false
+    default: ".config-changelog.yml"
 
 runs:
   using: composite
@@ -107,26 +111,20 @@ runs:
           return markdown
 
         def main():
-          # Tags de borne inférieure et supérieure
           lower_tag = "${{ inputs.lower-tag }}"
           upper_tag = "${{ inputs.upper-tag }}"
 
-          # Fichier de configuration pour le changelog
-          config_file = "config.yaml"
+          config_file = "${{ inputs.config-file }}"
 
-          # Récupérer les commits entre les tags spécifiés
           commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s'])
 
           with open(config_file, 'r') as config_file:
               config = yaml.load(config_file, Loader=yaml.FullLoader)
 
-          # Classer les commits en fonction des règles de classification définies dans la configuration
           classified_commits = classify_commits(commits, config['groups'])
 
-          # Générer le markdown à partir des commits classés
           final_markdown = generate_markdown(classified_commits)
 
-          # Imprimer le markdown
           print(final_markdown)
 
           with open('CHANGELOG.md', 'w') as file:
