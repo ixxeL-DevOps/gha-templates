@@ -57,7 +57,7 @@ runs:
         CYAN: \033[1;36m
         BLANK: \033[0m
     - id: generate-changelog
-      working-directory: ${{ inputs.workingdir }}
+      working-directory: ${{ github.workspace }}
       run: |
         import subprocess
         import yaml
