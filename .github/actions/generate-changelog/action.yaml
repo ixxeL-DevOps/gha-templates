@@ -146,19 +146,26 @@ runs:
 
           for title, commits in classified_commits.items():
               if commits:
-                  markdown += f"### {title}\n"
+                  markdown += "### {}\n".format(title)
                   for commit in commits:
                       match = re.match(pattern, commit)
                       if match:
-                          sha, rest, author, _, tag = match.groups()
-                          # sha, rest, author = match.groups()
+                          sha, rest, author, _, tags = match.groups()
                           rest = replace_pull_requests(rest, repo_url)
-                          tag_info = f" [🏷 {tag}]({repo_url}/tree/{tag})" if tag else ""
-                          markdown += f"* {sha}: {rest} by (@{author}){tag_info}\n"
-                          # markdown += f"* {sha}: {rest} by (@{author})\n"
+
+                          # Modification pour gérer plusieurs tags
+                          tag_list = tags.split(', ') if tags else []
+                          tags_info = " {}".format(' '.join(
+                              [f'[🏷 {tag}]({repo_url}/tree/{tag.replace("tag: ", "")})' for tag in
+                              tag_list])) if tag_list else ""
+
+                          # Modification pour générer des liens sans " tag: "
+                          tags_info = tags_info.replace(" tag: ", "")
+
+                          markdown += "* {}: {} by (@{}){}\n".format(sha, rest, author, tags_info)
                   markdown += "\n"
 
-          markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
+          markdown += "**Full Changelog**: {}/compare/{}...{}".format(repo_url, lower_tag, upper_tag)
           return markdown
 
         def load_user_config(file_path):
