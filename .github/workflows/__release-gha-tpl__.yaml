@@ -107,6 +107,7 @@ jobs:
           commit-sha: ${{ github.ref_name }}
           git-workdir: ${{ inputs.git-workdir }}
           force-tag: "false"
+          update-base-tags: "true"
       - name: Update changelog
         id: changelog
         uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
@@ -127,19 +128,6 @@ jobs:
           notes-file: CHANGELOG.md
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Extract tags
-        id: extract-tags
-        run: |
-          major_version=$(echo "${{ steps.svu.outputs.VERSION }}" | awk -F. '{print $1}')
-          minor_version=$(echo "${{ steps.svu.outputs.VERSION }}" | awk -F. '{print $1"."$2}')
-          echo "MAJOR_TAG=$major_version" >> $GITHUB_OUTPUT
-          echo "MINOR_TAG=$minor_version" >> $GITHUB_OUTPUT
-      - name: Update stable tag to latest version
-        run: |
-          git tag -f ${{ steps.extract-tags.outputs.MAJOR_TAG }} ${{ github.ref_name }}
-          git tag -f ${{ steps.extract-tags.outputs.MINOR_TAG }} ${{ github.ref_name }}
-          git tag -f latest ${{ github.ref_name }}
-          git push -f origin --tags
       - name: Git revert to main
         id: git-revert
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@main

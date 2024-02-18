@@ -33,10 +33,20 @@ inputs:
     required: false
     default: "false"
     description: git force push tag
+  update-base-tags:
+    required: false
+    default: "false"
+    description: update base tags (minor, major and latest)
 outputs:
   TAG_EXISTS:
     description: tag exists or not
     value: ${{ steps.git-tag.outputs.TAG_EXISTS }}
+  MAJOR_TAG:
+    description: major base tag
+    value: ${{ steps.git-tag.outputs.MAJOR_TAG }}
+  MINOR_TAG:
+    description: minor base tag
+    value: ${{ steps.git-tag.outputs.MINOR_TAG }}
 
 runs:
   using: composite
@@ -84,11 +94,35 @@ runs:
 
         if [ $? -eq 0 ]
         then
-          echo -e "${GREEN}[ SUCCESS ] New tag added to origin: ${{ inputs.tag-value }}${BLANK}"
-          exit 0
+          echo -e "${GREEN}[ SUCCESS ] New tag added to origin: ${YELLOW}${{ inputs.tag-value }}${BLANK}"
         else
           echo -e "${RED}[ ERROR ] Could not add tag${BLANK}"
           exit 1
+        fi
+
+        if [[ "${{ inputs.update-base-tags }}" == "true" ]]
+        then
+          echo -e "${YELLOW}[ EXECUTING ] > Updating base tags${BLANK}"
+          major_version=$(echo "${{ inputs.tag-value }}" | awk -F. '{print $1}')
+          minor_version=$(echo "${{ inputs.tag-value }}" | awk -F. '{print $1"."$2}')
+          echo "MAJOR_TAG=$major_version" >> $GITHUB_OUTPUT
+          echo "MINOR_TAG=$minor_version" >> $GITHUB_OUTPUT
+          git -C ${{ inputs.git-workdir }} tag -f ${major_version} ${{ inputs.commit-sha }}
+          git -C ${{ inputs.git-workdir }} tag -f ${minor_version} ${{ inputs.commit-sha }}
+          git -C ${{ inputs.git-workdir }} tag -f latest ${{ inputs.commit-sha }}
+          git -C ${{ inputs.git-workdir }} push -f origin --tags --push-option "${{ inputs.push-option }}"
+
+          if [ $? -eq 0 ]
+          then
+            echo -e "${GREEN}[ SUCCESS ] Update base minor tag succeeded : ${YELLOW}${minor_version}${BLANK}"
+            echo -e "${GREEN}[ SUCCESS ] Update base major tag succeeded : ${YELLOW}${major_version}${BLANK}"
+            echo -e "${GREEN}[ SUCCESS ] Update latest tag succeeded${BLANK}"
+          else
+            echo -e "${RED}[ ERROR ] Could not add base tags${BLANK}"
+            exit 1
+          fi
+        else
+          exit 0
         fi
       shell: bash
       env:
