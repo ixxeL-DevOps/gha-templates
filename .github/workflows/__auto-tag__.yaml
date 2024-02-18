@@ -91,14 +91,7 @@ jobs:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: ${{ steps.svu.outputs.VERSION }}
-      - name: Update changelog
-        id: changelog
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
-        with:
-          workingdir: ${{ inputs.workingdir }}
-          install: "false"
-          lower-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
-          upper-tag: ${{ github.sha }}
+
       - name: Git push
         id: git-push
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
@@ -107,6 +100,25 @@ jobs:
           git-workdir: ${{ inputs.workingdir }}
           git-staging-dir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
+
+      - name: Git tag
+        id: git-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        with:
+          tag-value: ${{ steps.svu.outputs.VERSION }}
+          commit-sha: ${{ github.ref_name }}
+          git-workdir: ${{ inputs.git-workdir }}
+          force-tag: "false"
+
+      - name: Update changelog
+        id: changelog
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          install: "false"
+          lower-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
+          upper-tag: ${{ steps.svu.outputs.VERSION }}
+
       - name: GH Release
         id: gh-release
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
@@ -114,7 +126,7 @@ jobs:
           tag: ${{ steps.svu.outputs.VERSION }}
           verify-tag: ${{ inputs.release-verify-tag }}
           last-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
-          target-branch: ${{ inputs.release-target-branch }}
+          target-branch: ${{ github.ref_name }}
           auto-changelog: "false"
           notes-file: ${{ inputs.workingdir }}/CHANGELOG.md
         env:
