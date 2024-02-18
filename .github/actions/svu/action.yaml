@@ -90,7 +90,8 @@ runs:
               VERSION=$(svu prerelease --pre-release=${{ inputs.prerelease-pattern }} --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
               if [ "$(echo "$VERSION" | awk -F "$PRERELEASE_PATTERN" '{print $1}')" == "$LAST_TAG" ]
               then
-                echo -e "${PURPLE}[ WARNING ] > Cancel to avoid irrelevant RC ($VERSION) and GA ($LAST_TAG) version${BLANK}"
+                echo -e "${RED}[ ERROR ] > Cancel to avoid irrelevant RC ${YELLOW}($VERSION)${RED} and GA ${YELLOW}($LAST_TAG)${RED} version${BLANK}"
+                echo -e "${RED}[ ERROR ] > You are trying to release a RC version not aligned with current GA version. Check that your commit messages trigger a bump (fix, feat) or that you are not on the same commit-sha.${BLANK}"
                 exit 1
               fi
             fi
