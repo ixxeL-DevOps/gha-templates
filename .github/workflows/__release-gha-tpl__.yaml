@@ -88,11 +88,11 @@ jobs:
         run: |
           if [ "${{ inputs.prerelease }}" == "true" ]
           then
-            REGEX="v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]{1,2}$"
+            REGEX='v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]{1,2}$'
           else
-            REGEX="v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
+            REGEX='v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$'
           fi
-          echo "Regix is $REGEX"
+          echo "Regex is $REGEX"
           echo "REGEX=$REGEX" >> GITHUB_OUTPUT
 
       - name: Calculate current and next tag
@@ -108,7 +108,7 @@ jobs:
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
-          pattern: "toto"
+          pattern: ${{ steps.regex-pattern.outputs.REGEX }}
           starting-tag: ""
 
       - name: Substitute ref
