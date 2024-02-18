@@ -210,6 +210,7 @@ jobs:
           force-tag: "false"
       - name: Update changelog
         id: changelog
+        if: inputs.release == 'true'
         uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
@@ -217,6 +218,7 @@ jobs:
           upper-tag: ${{ steps.svu.outputs.VERSION }}
       - name: GH Release
         id: gh-release
+        if: inputs.release == 'true'
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.svu.outputs.VERSION }}

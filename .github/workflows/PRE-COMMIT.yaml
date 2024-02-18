@@ -1,12 +1,21 @@
 ---
 name: Check GH actions templates
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/**
   pull_request:
     types:
       - opened
+      - reopened
       - synchronize
     branches:
       - "main"
+    paths:
+      - .github/**
+
 jobs:
   check-gha-templates:
     uses: ixxeL-DevOps/gha-templates/.github/workflows/__check-gha-templates__.yaml@main

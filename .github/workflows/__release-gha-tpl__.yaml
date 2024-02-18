@@ -1,5 +1,5 @@
 ---
-name: Automate tag
+name: Release GHA templates
 on:
   workflow_call:
     secrets:
@@ -58,7 +58,7 @@ on:
         default: fix
         type: string
 jobs:
-  auto-tag-repo:
+  release-gha-tpl:
     name: "\U0001F680 Release"
     timeout-minutes: 5
     runs-on: ${{ inputs.runs-on }}

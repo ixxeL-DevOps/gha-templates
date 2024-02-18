@@ -1,14 +1,10 @@
 ---
-name: Auto tag workflows
+name: Release GHA templates
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/**
   workflow_dispatch:
+
 jobs:
-  auto-tag-repo:
+  release-gha-tpl:
     uses: ixxeL-DevOps/gha-templates/.github/workflows/__auto-tag__.yaml@main
     with:
       git-workdir: .github
