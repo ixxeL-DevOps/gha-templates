@@ -85,6 +85,7 @@ jobs:
           git-workdir: ${{ inputs.workingdir }}
       - name: Build regex pattern
         id: regex-pattern
+        shell: bash
         run: |
           if [ "${{ inputs.prerelease }}" == "true" ]
           then
