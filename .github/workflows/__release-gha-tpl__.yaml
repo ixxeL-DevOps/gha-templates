@@ -86,7 +86,7 @@ jobs:
       - name: Build regex pattern
         id: regex-pattern
         run: |
-          if [ "${{ inputs.prerelease }}" == 'true' ]
+          if [ "${{ inputs.prerelease }}" == "true" ]
           then
             REGEX="v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]{1,2}$"
           else
