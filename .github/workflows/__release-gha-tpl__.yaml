@@ -15,6 +15,10 @@ on:
         required: false
         default: ubuntu-latest
         type: string
+      prerelease:
+        required: false
+        default: "false"
+        type: string
       ci-image:
         description: docker image to run pipeline on
         required: false
@@ -79,11 +83,31 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.workingdir }}
-      - name: Calculate last and next tag
+      - name: Calculate current and next tag
         id: svu
         uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
         with:
           workingdir: ${{ inputs.workingdir }}
+          prerelease: ${{ inputs.prerelease }}
+
+      - name: Get last tag (Release Candidate)
+        id: get-last-tag-rc
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        if: inputs.prerelease == 'true'
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+          branch: ${{ github.ref_name }}
+          pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
+
+      - name: Get last tag (General Availability)
+        id: get-last-tag-ga
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        if: inputs.prerelease == 'false'
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+          branch: ${{ github.ref_name }}
+          pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
+
       - name: Substitute ref
         id: substitute-ref
         uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
@@ -126,6 +150,7 @@ jobs:
           target-branch: ${{ github.ref_name }}
           auto-changelog: "false"
           notes-file: CHANGELOG.md
+          prerelease: ${{ inputs.prerelease }}
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Git revert to main

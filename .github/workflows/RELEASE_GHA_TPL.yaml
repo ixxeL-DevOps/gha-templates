@@ -2,11 +2,21 @@
 name: Release GHA templates
 on:
   workflow_dispatch:
+    inputs:
+      release-type:
+        required: true
+        type: choice
+        options:
+          - "GA"
+          - "RC"
+        default: "GA"
+        description: General Availability or Release Candidate
 
 jobs:
   release-gha-tpl:
     uses: ixxeL-DevOps/gha-templates/.github/workflows/__release-gha-tpl__.yaml@main
     with:
       git-workdir: .github
+      prerelease: "${{ inputs.release-type == 'RC' }}"
     secrets:
       git-token: ${{ secrets.PAT }}
