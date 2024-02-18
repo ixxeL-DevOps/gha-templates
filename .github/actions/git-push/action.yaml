@@ -59,20 +59,6 @@ runs:
           echo -e "${CYAN}[ INFO ] > Using current ref name ${GITHUB_REF_NAME}${BLANK}"
           GIT_REPO_BRANCH=${GITHUB_REF_NAME}
         fi
-        # if [[ -n "${{ inputs.repo-url }}" ]]
-        # then
-        #   echo -e "${CYAN}[ INFO ] > Using provided repository URL for push --> ${{ inputs.repo-url }}${BLANK}"
-        #   REPO_URL=$(echo "${{ inputs.repo-url }}" | sed 's/https:\/\///g')
-        #   [[ ${REPO_URL} == *.git ]] || REPO_URL+=.git
-        #   PUSH_URL="https://${GITHUB_ACTOR}:${{ inputs.git-token }}@${GITHUB_HOSTNAME}"
-        # else
-        #   echo -e "${CYAN}[ INFO ] > Using current repository URL for push --> ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git${BLANK}"
-        #   GITHUB_HOSTNAME=$(echo "${GITHUB_SERVER_URL}" | sed 's/https:\/\///g')
-        #   PUSH_URL="https://${GITHUB_ACTOR}:${{ inputs.git-token }}@${GITHUB_HOSTNAME}/${GITHUB_REPOSITORY}.git"
-        # fi
-
-        # echo -e "${CYAN}[ INFO ] > Setting URL origin to ${PUSH_URL}${BLANK}"
-        # git -C ${{ inputs.git-workdir }} remote set-url origin ${PUSH_URL}
 
         echo -e "${YELLOW}[ EXECUTING ] > Showing repo information.${BLANK}"
         echo -e "${CYAN}[ INFO ] > git status.${BLANK}"
