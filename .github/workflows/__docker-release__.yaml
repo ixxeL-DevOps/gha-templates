@@ -232,5 +232,6 @@ jobs:
           last-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
           auto-changelog: "false"
           notes-file: ${{ github.workspace }}/CHANGELOG.md
+          prerelease: ${{ inputs.prerelease }}
         env:
           GH_TOKEN: ${{ github.token }}
