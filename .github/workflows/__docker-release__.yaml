@@ -134,34 +134,37 @@ jobs:
           logout: false
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.20.0-rc.6
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
       - name: Calculate current and next tag
         id: svu
-        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@v0.20.0-rc.6
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
         with:
           workingdir: ${{ inputs.workingdir }}
           component: ${{ inputs.component }}
           prerelease: ${{ inputs.prerelease }}
+
       - name: Get last tag (Release Candidate)
         id: get-last-tag-rc
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.20.0-rc.6
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         if: inputs.prerelease == 'true'
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
           starting-tag: ""
+
       - name: Get last tag (General Availability)
         id: get-last-tag-ga
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.20.0-rc.6
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         if: inputs.prerelease == 'false'
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
           starting-tag: ""
+
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
         id: hadolint
@@ -224,7 +227,7 @@ jobs:
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
       - name: Git tag
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.20.0-rc.6
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         if: inputs.publish == 'true'
         with:
           tag-value: ${{ steps.svu.outputs.NEW_TAG }}
@@ -234,7 +237,7 @@ jobs:
       - name: Update changelog
         id: changelog
         if: inputs.publish == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@v0.20.0-rc.6
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
           lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || steps.svu.outputs.CURRENT_TAG || '' }}
@@ -242,7 +245,7 @@ jobs:
       - name: GH Release
         id: gh-release
         if: inputs.publish == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.20.0-rc.6
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.svu.outputs.NEW_TAG }}
           target-branch: ${{ github.ref_name }}
