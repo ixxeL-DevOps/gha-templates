@@ -40,7 +40,7 @@ runs:
       run: |
         set +e
         mkdir -p target_dir
-        wget https://github.com/caarlos0/svu/releases/download/v1.12.0/svu_1.12.0_linux_amd64.tar.gz -P target_dir
+        wget -q https://github.com/caarlos0/svu/releases/download/v1.12.0/svu_1.12.0_linux_amd64.tar.gz -P target_dir
         cd target_dir || exit
         tar -xzvf svu_1.12.0_linux_amd64.tar.gz
         chmod +x svu
