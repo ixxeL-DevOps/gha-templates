@@ -78,6 +78,8 @@ def classify_commits(commits: List[str], groups: List[Dict[str, Optional[str]]])
             regexp = group.get('regexp')
             if regexp and commit and commit.strip() and re.match(regexp, commit):
                 classified_commits[group['title']].append(commit)
+                print(f"Commit identified as : {classified_commits[group['title']]}")
+                print(f"Group : {group}\n")
                 matched = True
                 break
 
@@ -94,22 +96,36 @@ def replace_pull_requests(message, repo_url):
 
     return re.sub(r'\(#(\d+)\)$', replace, message)
 
+
 def generate_markdown(classified_commits, lower_tag, upper_tag, repo_url):
     markdown = "## Changelog\n"
-    pattern = '^([a-f0-9]+) (.+) @(.+)$'
+    pattern = r'^([a-f0-9]+) (.+?) @(.+?)\s*(\(tag: (.+?)\))?$'
 
     for title, commits in classified_commits.items():
         if commits:
-            markdown += f"### {title}\n"
+            markdown += "### {}\n".format(title)
             for commit in commits:
                 match = re.match(pattern, commit)
                 if match:
-                    sha, rest, author = match.groups()
+                    sha, rest, author, _, tags = match.groups()
                     rest = replace_pull_requests(rest, repo_url)
-                    markdown += f"* {sha}: {rest} by (@{author})\n"
+                    print(f"SHA: {sha}, REST: {rest}, AUTHOR: {author}, TAGS: {tags}")
+
+                    # Modification pour gérer plusieurs tags
+                    tag_list = tags.split(', ') if tags else []
+                    tags_info = " {}".format(' '.join(
+                        [f'[🏷 {tag}]({repo_url}/tree/{tag.replace("tag: ", "")})' for tag in
+                         tag_list])) if tag_list else ""
+
+                    # Modification pour générer des liens sans " tag: "
+                    tags_info = tags_info.replace(" tag: ", "")
+
+                    markdown += "* {}: {} by (@{}){}\n".format(sha, rest, author, tags_info)
+                else:
+                    print(f"Commit excluded: {commit}")
             markdown += "\n"
 
-    markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
+    markdown += "**Full Changelog**: {}/compare/{}...{}".format(repo_url, lower_tag, upper_tag)
     return markdown
 
 
@@ -126,16 +142,16 @@ def merge_configs(default_config, user_config):
     return merged_config
 
 def main():
-    lower_tag = "base-v1.0.1"
-    upper_tag = "base-v1.1.1"
-    repo_url = "https://github.com/ixxeL-DevOps/docker-images"
+    lower_tag = "v0.16.0"
+    upper_tag = "v0.17.0"
+    repo_url = "https://github.com/ixxeL-DevOps/gha-templates"
 
     config_file = ".config-changelog.yml"
 
     user_config = load_user_config(config_file)
     config = merge_configs(DEFAULT_CONFIG, user_config)
 
-    commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s @%an'])
+    commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s @%an %d'])
 
     classified_commits = classify_commits(commits, config['groups'])
 

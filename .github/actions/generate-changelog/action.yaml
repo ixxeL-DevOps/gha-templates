@@ -125,6 +125,8 @@ runs:
                   regexp = group.get('regexp')
                   if regexp and commit and commit.strip() and re.match(regexp, commit):
                       classified_commits[group['title']].append(commit)
+                      print(f"Commit identified as : {classified_commits[group['title']]}")
+                      print(f"Group : {group}\n")
                       matched = True
                       break
 
@@ -142,7 +144,7 @@ runs:
 
         def generate_markdown(classified_commits, lower_tag, upper_tag, repo_url):
           markdown = "## Changelog\n"
-          pattern = r'^([a-f0-9]+) (.+?) @(.+?) (\(tag: (.+?)\))?$'
+          pattern = r'^([a-f0-9]+) (.+?) @(.+?)\s*(\(tag: (.+?)\))?$'
 
           for title, commits in classified_commits.items():
               if commits:
@@ -150,19 +152,22 @@ runs:
                   for commit in commits:
                       match = re.match(pattern, commit)
                       if match:
-                          sha, rest, author, _, tags = match.groups()
-                          rest = replace_pull_requests(rest, repo_url)
+                        sha, rest, author, _, tags = match.groups()
+                        rest = replace_pull_requests(rest, repo_url)
+                        print(f"SHA: {sha}, REST: {rest}, AUTHOR: {author}, TAGS: {tags}")
 
-                          # Modification pour gérer plusieurs tags
-                          tag_list = tags.split(', ') if tags else []
-                          tags_info = " {}".format(' '.join(
-                              [f'[🏷 {tag}]({repo_url}/tree/{tag.replace("tag: ", "")})' for tag in
-                              tag_list])) if tag_list else ""
+                        # Modification pour gérer plusieurs tags
+                        tag_list = tags.split(', ') if tags else []
+                        tags_info = " {}".format(' '.join(
+                            [f'[🏷 {tag}]({repo_url}/tree/{tag.replace("tag: ", "")})' for tag in
+                            tag_list])) if tag_list else ""
 
-                          # Modification pour générer des liens sans " tag: "
-                          tags_info = tags_info.replace(" tag: ", "")
+                        # Modification pour générer des liens sans " tag: "
+                        tags_info = tags_info.replace(" tag: ", "")
 
-                          markdown += "* {}: {} by (@{}){}\n".format(sha, rest, author, tags_info)
+                        markdown += "* {}: {} by (@{}){}\n".format(sha, rest, author, tags_info)
+                      else:
+                        print(f"Commit excluded: {commit}")
                   markdown += "\n"
 
           markdown += "**Full Changelog**: {}/compare/{}...{}".format(repo_url, lower_tag, upper_tag)
