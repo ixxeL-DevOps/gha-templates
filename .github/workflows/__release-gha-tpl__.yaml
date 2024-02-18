@@ -76,24 +76,24 @@ jobs:
           token: ${{ secrets.git-token }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.16.0
         with:
           git-workdir: ${{ inputs.workingdir }}
       - name: Calculate last and next tag
         id: svu
-        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@v0.16.0
         with:
           workingdir: ${{ inputs.workingdir }}
       - name: Substitute ref
         id: substitute-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v0.16.0
         with:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: ${{ steps.svu.outputs.VERSION }}
       - name: Git push
         id: git-push
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v0.16.0
         with:
           git-msg: ":package: ci(auto): Release version ${{ steps.svu.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
@@ -101,7 +101,7 @@ jobs:
           push-option: ${{ inputs.push-option }}
       - name: Git tag
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.16.0
         with:
           tag-value: ${{ steps.svu.outputs.VERSION }}
           commit-sha: ${{ github.ref_name }}
@@ -110,7 +110,7 @@ jobs:
           update-base-tags: "true"
       - name: Update changelog
         id: changelog
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@v0.16.0
         with:
           workingdir: ${{ inputs.workingdir }}
           install: "false"
@@ -118,7 +118,7 @@ jobs:
           upper-tag: ${{ steps.svu.outputs.VERSION }}
       - name: GH Release
         id: gh-release
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.16.0
         with:
           tag: ${{ steps.svu.outputs.VERSION }}
           verify-tag: ${{ inputs.release-verify-tag }}
@@ -130,7 +130,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Git revert to main
         id: git-revert
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@v0.16.0
         with:
           git-workdir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
