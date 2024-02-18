@@ -106,7 +106,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.14.5
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ github.workspace }}
       - name: Check if tag is the latest version and not a pre-release
