@@ -193,6 +193,9 @@ runs:
           config_file = "${{ inputs.config-file }}"
 
           commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s @%an %d'])
+          for commit in commits:
+            print(commit)
+          print("\n")
 
           user_config = load_user_config(config_file)
           config = merge_configs(DEFAULT_CONFIG, user_config)

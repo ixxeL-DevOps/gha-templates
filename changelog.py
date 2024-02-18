@@ -152,6 +152,9 @@ def main():
     config = merge_configs(DEFAULT_CONFIG, user_config)
 
     commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s @%an %d'])
+    for commit in commits:
+        print(commit)
+    print("\n")
 
     classified_commits = classify_commits(commits, config['groups'])
 
