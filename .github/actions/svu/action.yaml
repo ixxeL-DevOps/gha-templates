@@ -88,6 +88,11 @@ runs:
               VERSION="${COMPONENT}v0.1.0-${{ inputs.prerelease-pattern }}.0"
             else
               VERSION=$(svu prerelease --pre-release=${{ inputs.prerelease-pattern }} --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
+              if [ "$(echo "$VERSION" | awk -F "$PRERELEASE_PATTERN" '{print $1}')" == "$LAST_TAG" ]
+              then
+                echo -e "${PURPLE}[ WARNING ] > Cancel to avoid irrelevant RC ($VERSION) and GA ($LAST_TAG) version${BLANK}"
+                exit 1
+              fi
             fi
           else
             VERSION="${COMPONENT}v0.1.0"
@@ -103,6 +108,7 @@ runs:
         if [ "${LAST_TAG}" == "${VERSION}" ]
         then
           echo -e "${RED}[ ERROR ] > Last tag ${YELLOW}${LAST_TAG}${RED} is same as new tag ${YELLOW}${VERSION}${BLANK}"
+          echo -e "${RED}[ ERROR ] > You are trying to release a version already existing. Check that your commit messages trigger a bump (fix, feat) or that you are not on the same commit-sha.${BLANK}"
           exit 1
         fi
         echo -e "${CYAN}[ INFO ] > Last tag is ${PURPLE}${LAST_TAG}${BLANK}"
