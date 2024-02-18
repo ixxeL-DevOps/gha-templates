@@ -144,6 +144,25 @@ jobs:
           workingdir: ${{ inputs.workingdir }}
           component: ${{ inputs.component }}
           prerelease: ${{ inputs.prerelease }}
+
+      - name: Get last tag
+        id: get-last-tag-rc
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        if: inputs.prerelease == 'true'
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+          branch: ${{ github.ref_name }}
+          pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
+
+      - name: Get last tag
+        id: get-last-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        if: inputs.prerelease == 'false'
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+          branch: ${{ github.ref_name }}
+          pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}"
+
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
         id: hadolint
