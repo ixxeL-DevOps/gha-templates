@@ -130,12 +130,12 @@ jobs:
           logout: false
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.15.0
         with:
           git-workdir: ${{ inputs.git-workdir }}
       - name: Calculate last and next tag
         id: svu
-        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@v0.15.0
         with:
           workingdir: ${{ inputs.workingdir }}
           component: ${{ inputs.component }}
@@ -201,7 +201,7 @@ jobs:
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
       - name: Git tag
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.15.0
         if: inputs.release == 'true'
         with:
           tag-value: ${{ steps.svu.outputs.VERSION }}
@@ -211,7 +211,7 @@ jobs:
       - name: Update changelog
         id: changelog
         if: inputs.release == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@v0.15.0
         with:
           workingdir: ${{ inputs.workingdir }}
           lower-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
@@ -219,7 +219,7 @@ jobs:
       - name: GH Release
         id: gh-release
         if: inputs.release == 'true'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.15.0
         with:
           tag: ${{ steps.svu.outputs.VERSION }}
           target-branch: ${{ github.ref_name }}

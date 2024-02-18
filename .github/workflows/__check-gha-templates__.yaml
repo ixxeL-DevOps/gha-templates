@@ -33,10 +33,10 @@ jobs:
       - uses: actions/setup-python@v4
       - name: Pre-commit
         id: pre-commit
-        uses: ixxeL-DevOps/gha-templates/.github/actions/pre-commit@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/pre-commit@v0.15.0
       - name: Shellcheck GHA
         id: shellcheck-gha
-        uses: ixxeL-DevOps/gha-templates/.github/actions/shellcheck-gha@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/shellcheck-gha@v0.15.0
         with:
           path: ${{ inputs.shellcheck-path }}
           exclude: ${{ inputs.shellcheck-exclude }}
