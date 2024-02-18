@@ -47,7 +47,7 @@ jobs:
           token: ${{ secrets.git-token }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.20.0-rc.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
       - name: Get branch name
@@ -67,21 +67,21 @@ jobs:
           echo "REGEX=$regex" >> $GITHUB_OUTPUT
       - name: Get last tag
         id: get-last-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.20.0-rc.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         with:
           git-workdir: ${{ inputs.workingdir }}
           branch: ${{ steps.branch-name.outputs.default_branch }}
           pattern: ${{ steps.define-component.outputs.REGEX }}
       - name: Update changelog
         id: changelog
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@v0.20.0-rc.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
           lower-tag: ${{ steps.get-last-tag.outputs.BEFORE_LAST_TAG }}
           upper-tag: ${{ github.ref_name }}
       - name: GH Release
         id: gh-release
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.20.0-rc.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ github.ref_name }}
           target-branch: ${{ steps.branch-name.outputs.default_branch }}
