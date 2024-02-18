@@ -76,13 +76,19 @@ runs:
 
         def classify_commits(commits: List[str], groups: List[Dict[str, Optional[str]]]) -> Dict[str, List[str]]:
           classified_commits = {group['title']: [] for group in groups}
+          classified_commits['🧰 Other work'] = []
 
           for commit in commits:
+              matched = False
               for group in groups:
-                  regexp = group['regexp']
-                  if commit and commit.strip() and bool(re.match(regexp, commit)):
-                      print(f"found commit {commit} in group {group['title']}")
+                  regexp = group.get('regexp')
+                  if regexp and commit and commit.strip() and re.match(regexp, commit):
                       classified_commits[group['title']].append(commit)
+                      matched = True
+                      break
+
+              if not matched:
+                  classified_commits['🧰 Other work'].append(commit)
 
           return classified_commits
 
