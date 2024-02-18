@@ -62,7 +62,6 @@ runs:
         echo -e "${CYAN}[ INFO ] > svu version.${BLANK}"
         svu --version
 
-        INCREMENT_ORDER="next"
         if [ -n "${{ inputs.component }}" ]
         then
           COMPONENT="${{ inputs.component }}-"
@@ -100,6 +99,11 @@ runs:
           else
             VERSION=$(svu next --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
           fi
+        fi
+        if [ "${LAST_TAG}" == "${VERSION}" ]
+        then
+          echo -e "${RED}[ ERROR ] > Last tag ${YELLOW}${LAST_TAG}${RED} is same as new tag ${YELLOW}${VERSION}${BLANK}"
+          exit 1
         fi
         echo -e "${CYAN}[ INFO ] > Last tag is ${PURPLE}${LAST_TAG}${BLANK}"
         echo -e "${CYAN}[ INFO ] > New tag is ${PURPLE}${VERSION}${BLANK}"
