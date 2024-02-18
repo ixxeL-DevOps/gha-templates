@@ -83,6 +83,12 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.workingdir }}
+      - name: Calculate current and next tag
+        id: svu
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          prerelease: ${{ inputs.prerelease }}
       - name: Build regex pattern
         id: regex-pattern
         shell: bash
@@ -95,14 +101,6 @@ jobs:
           fi
           echo "Regex is $REGEX"
           echo "REGEX=$REGEX" >> GITHUB_OUTPUT
-
-      - name: Calculate current and next tag
-        id: svu
-        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
-        with:
-          workingdir: ${{ inputs.workingdir }}
-          prerelease: ${{ inputs.prerelease }}
-
       - name: Get last tag
         id: get-last-tag
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
