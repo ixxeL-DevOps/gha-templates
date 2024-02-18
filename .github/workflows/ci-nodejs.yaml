@@ -96,7 +96,7 @@ jobs:
     concurrency:
       group: "${{ github.workflow }}-${{ github.ref }}"
       cancel-in-progress: true
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__ci-nodejs__.yaml@v0.20.0-rc.3
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__ci-nodejs__.yaml@main
     with:
       workingdir: ${{ inputs.workingdir }}
       workload_identity_provider: ${{ inputs.workload_identity_provider }}
