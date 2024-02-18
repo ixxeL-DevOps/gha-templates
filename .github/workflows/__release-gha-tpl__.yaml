@@ -89,25 +89,25 @@ jobs:
         with:
           workingdir: ${{ inputs.workingdir }}
           prerelease: ${{ inputs.prerelease }}
-      - name: Build regex pattern
-        id: regex-pattern
-        shell: bash
-        run: |
-          if [ "${{ inputs.prerelease }}" == "true" ]
-          then
-            REGEX='v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]{1,2}$'
-          else
-            REGEX='v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$'
-          fi
-          echo "Regex is $REGEX"
-          echo "REGEX=$REGEX" >> GITHUB_OUTPUT
-      - name: Get last tag
-        id: get-last-tag
+
+      - name: Get last tag (Release Candidate)
+        id: get-last-tag-rc
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        if: inputs.prerelease == 'true'
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
-          pattern: ${{ steps.regex-pattern.outputs.REGEX }}
+          pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
+          starting-tag: ""
+
+      - name: Get last tag (General Availability)
+        id: get-last-tag-ga
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        if: inputs.prerelease == 'false'
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+          branch: ${{ github.ref_name }}
+          pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
           starting-tag: ""
 
       - name: Substitute ref
@@ -140,7 +140,7 @@ jobs:
         with:
           workingdir: ${{ inputs.workingdir }}
           install: "false"
-          lower-tag: ${{ steps.get-last-tag.outputs.LAST_TAG || steps.svu.outputs.CURRENT_TAG || '' }}
+          lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || steps.svu.outputs.CURRENT_TAG || '' }}
           upper-tag: ${{ steps.svu.outputs.NEW_TAG }}
       - name: GH Release
         id: gh-release
@@ -148,7 +148,7 @@ jobs:
         with:
           tag: ${{ steps.svu.outputs.NEW_TAG }}
           verify-tag: ${{ inputs.release-verify-tag }}
-          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG || steps.svu.outputs.CURRENT_TAG || '' }}
+          last-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || steps.svu.outputs.CURRENT_TAG || '' }}
           target-branch: ${{ github.ref_name }}
           auto-changelog: "false"
           notes-file: CHANGELOG.md
