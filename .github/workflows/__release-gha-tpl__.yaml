@@ -95,7 +95,7 @@ jobs:
         id: git-push
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
-          git-msg: ":package: ci(auto): Release version ${{ steps.svu.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
+          git-msg: "⚙️ build(ci): Release version ${{ steps.svu.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
           git-staging-dir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
@@ -135,4 +135,4 @@ jobs:
           git-workdir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
           commit-sha-revert: ${{ steps.git-push.outputs.GIT_PUSHED_COMMIT_SHA }}
-          git-msg: ":recycle: revert(actions): restore workflow ref to trunk branch [skip ci]"
+          git-msg: "⚙️ revert(ci): restore workflow ref to trunk branch [skip ci]"
