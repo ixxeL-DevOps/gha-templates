@@ -7,6 +7,6 @@ on:
         required: false
 jobs:
   update-pr-title:
-    uses: ixxeL-DevOps/gha-templates/.github/workflows/__update-PR__.yaml@v0.20.0-rc.8
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__update-PR__.yaml@main
     secrets:
       git-token: ${{ secrets.git-token }}
