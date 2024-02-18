@@ -61,10 +61,6 @@ runs:
         fi
 
         echo -e "${YELLOW}[ EXECUTING ] > Showing repo information.${BLANK}"
-        echo -e "${CYAN}[ INFO ] > git status.${BLANK}"
-        git -C ${{ inputs.git-workdir }} -c color.status=always status
-        echo -e "${CYAN}[ INFO ] > git diff.${BLANK}"
-        git -C ${{ inputs.git-workdir }} diff --color=always
         echo -e "${CYAN}[ INFO ] > git branch${BLANK}"
         git -C ${{ inputs.git-workdir }} branch
         echo -e "${CYAN}[ INFO ] > git origin.${BLANK}"

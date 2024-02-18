@@ -153,6 +153,7 @@ jobs:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
+          starting-tag: ""
 
       - name: Get last tag (General Availability)
         id: get-last-tag-ga
@@ -162,6 +163,7 @@ jobs:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
+          starting-tag: ""
 
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
@@ -205,7 +207,7 @@ jobs:
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.VERSION }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
       - name: Build and publish Docker img
         uses: docker/build-push-action@v5
@@ -221,14 +223,14 @@ jobs:
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.VERSION }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
       - name: Git tag
         id: git-tag
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         if: inputs.publish == 'true'
         with:
-          tag-value: ${{ steps.svu.outputs.VERSION }}
+          tag-value: ${{ steps.svu.outputs.NEW_TAG }}
           commit-sha: ${{ github.ref_name }}
           git-workdir: ${{ inputs.git-workdir }}
           force-tag: "false"
@@ -238,17 +240,17 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
-          lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || '' }}
-          upper-tag: ${{ steps.svu.outputs.VERSION }}
+          lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || steps.svu.outputs.CURRENT_TAG || '' }}
+          upper-tag: ${{ steps.svu.outputs.NEW_TAG }}
       - name: GH Release
         id: gh-release
         if: inputs.publish == 'true'
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
-          tag: ${{ steps.svu.outputs.VERSION }}
+          tag: ${{ steps.svu.outputs.NEW_TAG }}
           target-branch: ${{ github.ref_name }}
           verify-tag: "true"
-          last-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || '' }}
+          last-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || steps.svu.outputs.CURRENT_TAG || '' }}
           auto-changelog: "false"
           notes-file: ${{ github.workspace }}/CHANGELOG.md
           prerelease: ${{ inputs.prerelease }}

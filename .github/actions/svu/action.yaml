@@ -22,14 +22,14 @@ inputs:
   prerelease-pattern:
     required: false
     default: "rc"
-    description: use prerelease
+    description: prerelease pattern to use
 outputs:
-  LAST_TAG:
-    description: last git tag
-    value: ${{ steps.svu.outputs.LAST_TAG }}
-  VERSION:
+  CURRENT_TAG:
+    description: current git tag
+    value: ${{ steps.svu.outputs.CURRENT_TAG }}
+  NEW_TAG:
     description: next git tag
-    value: ${{ steps.svu.outputs.VERSION }}
+    value: ${{ steps.svu.outputs.NEW_TAG }}
 
 runs:
   using: composite
@@ -75,47 +75,47 @@ runs:
         fi
 
         echo -e "${YELLOW}[ EXECUTING ] > Calculating current and next tag${BLANK}"
-        LAST_TAG=$(svu current --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*${PRERELEASE_PATTERN}" --directory=${{ inputs.workingdir }})
+        CURRENT_TAG=$(svu current --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*${PRERELEASE_PATTERN}" --directory=${{ inputs.workingdir }})
         if [ $? -ne 0 ]
         then
-          LAST_TAG=""
+          CURRENT_TAG=""
           if [ "${{ inputs.prerelease }}" == "true" ]
           then
-            LAST_TAG=$(svu current --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
+            CURRENT_TAG=$(svu current --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
             if [ $? -ne 0 ]
             then
-              LAST_TAG=""
-              VERSION="${COMPONENT}v0.1.0-${{ inputs.prerelease-pattern }}.0"
+              CURRENT_TAG=""
+              NEW_TAG="${COMPONENT}v0.1.0-${{ inputs.prerelease-pattern }}.0"
             else
-              VERSION=$(svu prerelease --pre-release=${{ inputs.prerelease-pattern }} --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
-              if [ "$(echo "$VERSION" | awk -F "$PRERELEASE_PATTERN" '{print $1}')" == "$LAST_TAG" ]
+              NEW_TAG=$(svu prerelease --pre-release=${{ inputs.prerelease-pattern }} --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
+              if [ "$(echo "$NEW_TAG" | awk -F "$PRERELEASE_PATTERN" '{print $1}')" == "$CURRENT_TAG" ]
               then
-                echo -e "${RED}[ ERROR ] > Cancel to avoid irrelevant RC ${YELLOW}($VERSION)${RED} and GA ${YELLOW}($LAST_TAG)${RED} version${BLANK}"
+                echo -e "${RED}[ ERROR ] > Cancel to avoid irrelevant RC ${YELLOW}($NEW_TAG)${RED} and GA ${YELLOW}($CURRENT_TAG)${RED} version${BLANK}"
                 echo -e "${RED}[ ERROR ] > You are trying to release a RC version not aligned with current GA version. Check that your commit messages trigger a bump (fix, feat) or that you are not on the same commit-sha.${BLANK}"
                 exit 1
               fi
             fi
           else
-            VERSION="${COMPONENT}v0.1.0"
+            NEW_TAG="${COMPONENT}v0.1.0"
           fi
         else
           if [ "${{ inputs.prerelease }}" == "true" ]
           then
-            VERSION=$(svu prerelease --pre-release=${{ inputs.prerelease-pattern }} --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
+            NEW_TAG=$(svu prerelease --pre-release=${{ inputs.prerelease-pattern }} --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
           else
-            VERSION=$(svu next --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
+            NEW_TAG=$(svu next --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
           fi
         fi
-        if [ "${LAST_TAG}" == "${VERSION}" ]
+        if [ "${CURRENT_TAG}" == "${NEW_TAG}" ]
         then
-          echo -e "${RED}[ ERROR ] > Current tag ${YELLOW}${LAST_TAG}${RED} is same as new tag ${YELLOW}${VERSION}${BLANK}"
+          echo -e "${RED}[ ERROR ] > Current tag ${YELLOW}${CURRENT_TAG}${RED} is same as new tag ${YELLOW}${NEW_TAG}${BLANK}"
           echo -e "${RED}[ ERROR ] > You are trying to release a version already existing. Check that your commit messages trigger a bump (fix, feat) or that you are not on the same commit-sha.${BLANK}"
           exit 1
         fi
-        echo -e "${CYAN}[ INFO ] > Current tag is ${PURPLE}${LAST_TAG}${BLANK}"
-        echo -e "${CYAN}[ INFO ] > New tag is ${PURPLE}${VERSION}${BLANK}"
-        echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo -e "${CYAN}[ INFO ] > Current tag is ${PURPLE}${CURRENT_TAG}${BLANK}"
+        echo -e "${CYAN}[ INFO ] > New tag is ${PURPLE}${NEW_TAG}${BLANK}"
+        echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_OUTPUT
+        echo "NEW_TAG=$NEW_TAG" >> $GITHUB_OUTPUT
       shell: bash
       env:
         RED: \033[1;31m
