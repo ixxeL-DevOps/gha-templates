@@ -80,7 +80,12 @@ runs:
         if [ $? -ne 0 ]
         then
           LAST_TAG=""
-          VERSION="${COMPONENT}v0.1.0"
+          if [ "${{ inputs.prerelease }}" == "true" ]
+          then
+            VERSION="${COMPONENT}v0.1.0${PRERELEASE_PATTERN}.0"
+          else
+            VERSION="${COMPONENT}v0.1.0"
+          fi
         else
           if [ "${{ inputs.prerelease }}" == "true" ]
           then
@@ -89,7 +94,6 @@ runs:
             VERSION=$(svu next --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
           fi
         fi
-
         echo -e "${CYAN}[ INFO ] > Last tag is ${PURPLE}${LAST_TAG}${BLANK}"
         echo -e "${CYAN}[ INFO ] > New tag is ${PURPLE}${VERSION}${BLANK}"
         echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT

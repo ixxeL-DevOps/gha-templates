@@ -49,7 +49,7 @@ jobs:
       cache-registry: ${{ inputs.cache-registry }}
       registry-url: ${{ inputs.registry-url }}
       registry-username: ${{ inputs.registry-username }}
-      release: false
+      publish: false
     secrets:
       git-token: ${{ secrets.git-token }}
       docker-io-pwd: ${{ secrets.DOCKER_IO_PWD }}
@@ -67,7 +67,7 @@ jobs:
       cache-registry: ${{ inputs.cache-registry }}
       registry-url: ${{ inputs.registry-url }}
       registry-username: ${{ inputs.registry-username }}
-      release: false
+      publish: false
     secrets:
       git-token: ${{ secrets.git-token }}
       docker-io-pwd: ${{ secrets.DOCKER_IO_PWD }}
