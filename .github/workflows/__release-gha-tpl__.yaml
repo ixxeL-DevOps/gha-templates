@@ -138,7 +138,7 @@ jobs:
         with:
           workingdir: ${{ inputs.workingdir }}
           install: "false"
-          lower-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
+          lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || '' }}
           upper-tag: ${{ steps.svu.outputs.VERSION }}
       - name: GH Release
         id: gh-release
@@ -146,7 +146,7 @@ jobs:
         with:
           tag: ${{ steps.svu.outputs.VERSION }}
           verify-tag: ${{ inputs.release-verify-tag }}
-          last-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
+          last-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || '' }}
           target-branch: ${{ github.ref_name }}
           auto-changelog: "false"
           notes-file: CHANGELOG.md
