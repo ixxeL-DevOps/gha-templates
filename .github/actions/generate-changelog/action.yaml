@@ -142,8 +142,7 @@ runs:
 
         def generate_markdown(classified_commits, lower_tag, upper_tag, repo_url):
           markdown = "## Changelog\n"
-          # pattern = '^([a-f0-9]+) (.+) @(.+)$'
-          pattern = '^([a-f0-9]+) (.+?) @(.+?) (\(tag: (.+?)\))?$'
+          pattern = r'^([a-f0-9]+) (.+?) @(.+?) (\(tag: (.+?)\))?$'
 
           for title, commits in classified_commits.items():
               if commits:
