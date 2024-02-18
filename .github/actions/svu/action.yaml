@@ -82,7 +82,14 @@ runs:
           LAST_TAG=""
           if [ "${{ inputs.prerelease }}" == "true" ]
           then
-            VERSION="${COMPONENT}v0.1.0-${{ inputs.prerelease-pattern }}.0"
+            LAST_TAG=$(svu current --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
+            if [ $? -ne 0 ]
+            then
+              LAST_TAG=""
+              VERSION="${COMPONENT}v0.1.0-${{ inputs.prerelease-pattern }}.0"
+            else
+              VERSION=$(svu prerelease --pre-release=${{ inputs.prerelease-pattern }} --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
+            fi
           else
             VERSION="${COMPONENT}v0.1.0"
           fi
