@@ -134,7 +134,7 @@ jobs:
             secretengine/data/chartmuseum/auth password | CHARTMUSEUM_PR_PASSWORD
       - name: Helm pull
         id: helm-pull
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-pull@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-pull@main
         with:
           workingdir: ${{ inputs.workingdir }}
           fetch-latest: ${{ inputs.helm-fetch-latest }}
@@ -151,7 +151,7 @@ jobs:
       - name: Helm pushing with Vault
         id: helm-push-vault
         if: inputs.vault-enabled == true
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-push@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-push@main
         with:
           workingdir: ${{ inputs.workingdir }}
           chart-name: ${{ inputs.helm-chart-name }}
@@ -169,7 +169,7 @@ jobs:
       - name: Helm pushing
         id: helm-push
         if: inputs.vault-enabled == false
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-push@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-push@main
         with:
           workingdir: ${{ inputs.workingdir }}
           chart-name: ${{ inputs.helm-chart-name }}

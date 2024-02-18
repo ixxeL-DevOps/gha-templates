@@ -80,43 +80,46 @@ jobs:
           token: ${{ secrets.git-token }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.workingdir }}
       - name: Calculate current and next tag
         id: svu
-        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
         with:
           workingdir: ${{ inputs.workingdir }}
           prerelease: ${{ inputs.prerelease }}
+
       - name: Get last tag (Release Candidate)
         id: get-last-tag-rc
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         if: inputs.prerelease == 'true'
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
           starting-tag: ""
+
       - name: Get last tag (General Availability)
         id: get-last-tag-ga
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         if: inputs.prerelease == 'false'
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
           starting-tag: ""
+
       - name: Substitute ref
         id: substitute-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
         with:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: ${{ steps.svu.outputs.VERSION }}
       - name: Git push
         id: git-push
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
           git-msg: "⚙️ build(ci): Release version ${{ steps.svu.outputs.VERSION }} from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: ${{ inputs.workingdir }}
@@ -124,7 +127,7 @@ jobs:
           push-option: ${{ inputs.push-option }}
       - name: Git tag
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         with:
           tag-value: ${{ steps.svu.outputs.VERSION }}
           commit-sha: ${{ github.ref_name }}
@@ -133,7 +136,7 @@ jobs:
           update-base-tags: "${{ inputs.prerelease == 'false' }}"
       - name: Update changelog
         id: changelog
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
           install: "false"
@@ -141,7 +144,7 @@ jobs:
           upper-tag: ${{ steps.svu.outputs.VERSION }}
       - name: GH Release
         id: gh-release
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.svu.outputs.VERSION }}
           verify-tag: ${{ inputs.release-verify-tag }}
@@ -154,7 +157,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Git revert to main
         id: git-revert
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@v0.19.0-rc.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-revert@main
         with:
           git-workdir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
