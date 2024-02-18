@@ -92,6 +92,7 @@ jobs:
           else
             REGEX="v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
           fi
+          echo "Regix is $REGEX"
           echo "REGEX=$REGEX" >> GITHUB_OUTPUT
 
       - name: Calculate current and next tag
