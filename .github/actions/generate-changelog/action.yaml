@@ -68,47 +68,47 @@ runs:
             'groups': [
                 {
                     'title': "💥 Breaking changes",
-                    'regexp': '^.*?(feat|chore|fix)!(?:\(\w+\))?!?: .+$',
+                    'regexp': r'^.*?(feat|chore|fix)!(?:\(\w+\))?!?: .+$',
                     'order': 50
                 },
                 {
                     'title': "🚀 New Features",
-                    'regexp': '^.*?feat(?:\(\w+\))?!?: .+$',
+                    'regexp': r'^.*?feat(?:\(\w+\))?!?: .+$',
                     'order': 100
                 },
                 {
                     'title': "📦 Dependency updates",
-                    'regexp': '^.*?chore(?:\(\w+\))?!?: .+$',
+                    'regexp': r'^.*?chore(?:\(\w+\))?!?: .+$',
                     'order': 300
                 },
                 {
                     'title': "⚠️ Security updates",
-                    'regexp': '^.*?sec(?:\(\w+\))?!?: .+$',
+                    'regexp': r'^.*?sec(?:\(\w+\))?!?: .+$',
                     'order': 150
                 },
                 {
                     'title': "🐛 Bug fixes",
-                    'regexp': '^.*?(fix|refactor)(?:\(\w+\))?!?: .+$',
+                    'regexp': r'^.*?(fix|refactor)(?:\(\w+\))?!?: .+$',
                     'order': 200
                 },
                 {
                     'title': "🔨 Refactoring",
-                    'regexp': '^.*?refactor(?:\(\w+\))?!?: .+$',
+                    'regexp': r'^.*?refactor(?:\(\w+\))?!?: .+$',
                     'order': 250
                 },
                 {
                     'title': "♻️ Revert changes",
-                    'regexp': '^.*?revert(?:\(\w+\))?!?: .+$',
+                    'regexp': r'^.*?revert(?:\(\w+\))?!?: .+$',
                     'order': 250
                 },
                 {
                     'title': "📚 Documentation updates",
-                    'regexp': '^.*?docs(?:\(\w+\))?!?: .+$',
+                    'regexp': r'^.*?docs(?:\(\w+\))?!?: .+$',
                     'order': 400
                 },
                 {
                     'title': "🏗️ Build process updates",
-                    'regexp': '^.*?(build|ci)(?:\(\w+\))?!?: .+$',
+                    'regexp': r'^.*?(build|ci)(?:\(\w+\))?!?: .+$',
                     'order': 400
                 },
                 {
@@ -136,7 +136,7 @@ runs:
               matched = False
               for group in groups:
                   regexp = group.get('regexp')
-                  if regexp and commit and commit.strip() and re.match(f"r'{regexp}'", commit):
+                  if regexp and commit and commit.strip() and re.match(regexp, commit):
                       classified_commits[group['title']].append(commit)
                       matched = True
                       break
