@@ -158,8 +158,8 @@ runs:
                           # markdown += f"* {sha}: {rest} by (@{author})\n"
                   markdown += "\n"
 
-            markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
-            return markdown
+          markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
+          return markdown
 
         def load_user_config(file_path):
           try:
