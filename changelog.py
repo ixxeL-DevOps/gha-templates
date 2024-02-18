@@ -88,6 +88,10 @@ def classify_commits(commits: List[str], groups: List[Dict[str, Optional[str]]])
 
     return classified_commits
 
+def clean_branch_info(branch_info):
+    # Supprime "HEAD -> " et "origin/"
+    return re.sub(r'(HEAD -> |origin/)', '', branch_info)
+
 
 def replace_pull_requests(message, repo_url):
     def replace(match):
@@ -105,6 +109,7 @@ def generate_markdown(classified_commits, lower_tag, upper_tag, repo_url):
         if commits:
             markdown += "### {}\n".format(title)
             for commit in commits:
+                commit = clean_branch_info(commit)
                 match = re.match(pattern, commit)
                 if match:
                     sha, rest, author, _, tags = match.groups()

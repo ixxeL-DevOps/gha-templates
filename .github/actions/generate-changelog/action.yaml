@@ -142,6 +142,10 @@ runs:
 
           return re.sub(r'\(#(\d+)\)$', replace, message)
 
+        def clean_branch_info(branch_info):
+          # Supprime "HEAD -> " et "origin/"
+          return re.sub(r'(HEAD -> |origin/)', '', branch_info)
+
         def generate_markdown(classified_commits, lower_tag, upper_tag, repo_url):
           markdown = "## Changelog\n"
           pattern = r'^([a-f0-9]+) (.+?) @(.+?)\s*(\(tag: (.+?)\))?$'
@@ -150,6 +154,7 @@ runs:
               if commits:
                   markdown += "### {}\n".format(title)
                   for commit in commits:
+                      commit = clean_branch_info(commit)
                       match = re.match(pattern, commit)
                       if match:
                         sha, rest, author, _, tags = match.groups()
