@@ -161,7 +161,7 @@ jobs:
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
-          pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}"
+          pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
 
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
