@@ -21,12 +21,12 @@ jobs:
           token: ${{ secrets.PAT }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.12.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: .
       - name: "\U0001F3F7️ Git tag"
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.12.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         with:
           tag-msg: "CI auto Git tag"
           tag-value: ${{ inputs.tag }}
@@ -61,14 +61,14 @@ jobs:
           git push -f origin --tags
       - name: Restore ref
         id: restore-ref
-        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@v0.12.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/change-action-ref@main
         with:
           workflows-directory: ./.github/workflows/*.yaml
           actions-source: ixxeL-DevOps
           new-ref: ${{ github.ref_name }}
       - name: Git push
         id: git-push-final
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@v0.12.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
         with:
           git-msg: ":recycle: Restore parameters from user ${GITHUB_ACTOR} [skip ci]"
           git-workdir: .
