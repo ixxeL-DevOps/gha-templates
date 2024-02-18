@@ -64,6 +64,60 @@ runs:
         import re
         from typing import List, Dict, Optional
 
+        DEFAULT_CONFIG = {
+            'groups': [
+                {
+                    'title': "💥 Breaking changes",
+                    'regexp': '^.*?(feat|chore|fix)!(?:\(\w+\))?!?: .+$',
+                    'order': 50
+                },
+                {
+                    'title': "🚀 New Features",
+                    'regexp': '^.*?feat(?:\(\w+\))?!?: .+$',
+                    'order': 100
+                },
+                {
+                    'title': "📦 Dependency updates",
+                    'regexp': '^.*?chore(?:\(\w+\))?!?: .+$',
+                    'order': 300
+                },
+                {
+                    'title': "⚠️ Security updates",
+                    'regexp': '^.*?sec(?:\(\w+\))?!?: .+$',
+                    'order': 150
+                },
+                {
+                    'title': "🐛 Bug fixes",
+                    'regexp': '^.*?(fix|refactor)(?:\(\w+\))?!?: .+$',
+                    'order': 200
+                },
+                {
+                    'title': "🔨 Refactoring",
+                    'regexp': '^.*?refactor(?:\(\w+\))?!?: .+$',
+                    'order': 250
+                },
+                {
+                    'title': "♻️ Revert changes",
+                    'regexp': '^.*?revert(?:\(\w+\))?!?: .+$',
+                    'order': 250
+                },
+                {
+                    'title': "📚 Documentation updates",
+                    'regexp': '^.*?docs(?:\(\w+\))?!?: .+$',
+                    'order': 400
+                },
+                {
+                    'title': "🏗️ Build process updates",
+                    'regexp': '^.*?(build|ci)(?:\(\w+\))?!?: .+$',
+                    'order': 400
+                },
+                {
+                    'title': "🧰 Other work",
+                    'order': 9999
+                }
+            ]
+        }
+
         def run_command(command: List[str]) -> str:
           result = subprocess.run(command, stdout=subprocess.PIPE, text=True)
           return result.stdout.strip()
@@ -117,6 +171,18 @@ runs:
             markdown += f"**Full Changelog**: {repo_url}/compare/{lower_tag}...{upper_tag}"
             return markdown
 
+        def load_user_config(file_path):
+          try:
+              with open(file_path, 'r') as config_file:
+                  return yaml.safe_load(config_file)
+          except FileNotFoundError:
+              return {}
+
+        def merge_configs(default_config, user_config):
+          merged_config = default_config.copy()
+          merged_config.update(user_config)
+          return merged_config
+
         def main():
           lower_tag = "${{ inputs.lower-tag }}"
           upper_tag = "${{ inputs.upper-tag }}"
@@ -126,8 +192,8 @@ runs:
 
           commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s @%an'])
 
-          with open(config_file, 'r') as config_file:
-              config = yaml.load(config_file, Loader=yaml.FullLoader)
+          user_config = load_user_config(config_file)
+          config = merge_configs(DEFAULT_CONFIG, user_config)
 
           classified_commits = classify_commits(commits, config['groups'])
 
