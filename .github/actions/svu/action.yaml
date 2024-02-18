@@ -82,7 +82,7 @@ runs:
           LAST_TAG=""
           if [ "${{ inputs.prerelease }}" == "true" ]
           then
-            VERSION="${COMPONENT}v0.1.0${PRERELEASE_PATTERN}.0"
+            VERSION="${COMPONENT}v0.1.0-${{ inputs.prerelease-pattern }}.0"
           else
             VERSION="${COMPONENT}v0.1.0"
           fi
