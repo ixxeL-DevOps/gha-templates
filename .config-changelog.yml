@@ -2,28 +2,19 @@
 groups:
   - title: "💥 Breaking changes"
     regexp: '^.*?(feat|chore|fix)!(?:\(\w+\))?!?: .+$'
-    order: 50
   - title: "🚀 New Features"
     regexp: '^.*?feat(:\(\w+\))?: .+$'
-    order: 100
   - title: "📦 Dependency updates"
     regexp: '^.*?chore(:\(\w+\))?: .+$'
-    order: 300
   - title: "⚠️ Security updates"
     regexp: '^.*?sec(:\(\w+\))?: .+$'
-    order: 150
   - title: "🐛 Bug fixes"
     regexp: '^.*?(fix|refactor)(:\(\w+\))?: .+$'
-    order: 200
   - title: "🔨 Refactoring"
     regexp: '^.*?refactor(:\(\w+\))?: .+$'
-    order: 250
   - title: "♻️ Revert changes"
     regexp: '^.*?revert(:\(\w+\))?: .+$'
-    order: 250
   - title: "📚 Documentation updates"
     regexp: '^.*?docs(:\(\w+\))?: .+$'
-    order: 400
   - title: "🏗️ Build process updates"
     regexp: '^.*?(build|ci)(:\(\w+\))?: .+$'
-    order: 400
