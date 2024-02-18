@@ -98,6 +98,7 @@ jobs:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
+          starting-tag: ""
 
       - name: Get last tag (General Availability)
         id: get-last-tag-ga
@@ -107,6 +108,7 @@ jobs:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
+          starting-tag: ""
 
       - name: Substitute ref
         id: substitute-ref
@@ -131,14 +133,14 @@ jobs:
           commit-sha: ${{ github.ref_name }}
           git-workdir: ${{ inputs.git-workdir }}
           force-tag: "false"
-          update-base-tags: "true"
+          update-base-tags: "${{ inputs.prerelease == 'false' }}"
       - name: Update changelog
         id: changelog
         uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
           install: "false"
-          lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || '' }}
+          lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || steps.svu.outputs.LAST_TAG || '' }}
           upper-tag: ${{ steps.svu.outputs.VERSION }}
       - name: GH Release
         id: gh-release
@@ -146,7 +148,7 @@ jobs:
         with:
           tag: ${{ steps.svu.outputs.VERSION }}
           verify-tag: ${{ inputs.release-verify-tag }}
-          last-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || '' }}
+          last-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || steps.svu.outputs.LAST_TAG || '' }}
           target-branch: ${{ github.ref_name }}
           auto-changelog: "false"
           notes-file: CHANGELOG.md
