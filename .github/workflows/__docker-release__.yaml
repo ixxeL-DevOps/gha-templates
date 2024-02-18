@@ -205,6 +205,25 @@ jobs:
         if: inputs.release == 'true'
         with:
           tag-value: ${{ steps.svu.outputs.VERSION }}
-          commit-sha: ${{ github.sha }}
+          commit-sha: ${{ github.ref_name }}
           git-workdir: ${{ inputs.git-workdir }}
           force-tag: "false"
+      - name: Update changelog
+        id: changelog
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          lower-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
+          upper-tag: ${{ steps.svu.outputs.VERSION }}
+      - name: GH Release
+        id: gh-release
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
+        with:
+          tag: ${{ steps.svu.outputs.VERSION }}
+          target-branch: ${{ github.ref_name }}
+          verify-tag: "true"
+          last-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
+          auto-changelog: "false"
+          notes-file: ${{ inputs.workingdir }}/CHANGELOG.md
+        env:
+          GH_TOKEN: ${{ github.token }}

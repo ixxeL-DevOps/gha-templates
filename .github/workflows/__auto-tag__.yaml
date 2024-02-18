@@ -91,7 +91,6 @@ jobs:
           workflows-directory: ${{ inputs.workflows-directory }}
           actions-source: ${{ inputs.actions-source }}
           new-ref: ${{ steps.svu.outputs.VERSION }}
-
       - name: Git push
         id: git-push
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-push@main
@@ -100,7 +99,6 @@ jobs:
           git-workdir: ${{ inputs.workingdir }}
           git-staging-dir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
-
       - name: Git tag
         id: git-tag
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
@@ -109,7 +107,6 @@ jobs:
           commit-sha: ${{ github.ref_name }}
           git-workdir: ${{ inputs.git-workdir }}
           force-tag: "false"
-
       - name: Update changelog
         id: changelog
         uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
@@ -118,7 +115,6 @@ jobs:
           install: "false"
           lower-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
           upper-tag: ${{ steps.svu.outputs.VERSION }}
-
       - name: GH Release
         id: gh-release
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
