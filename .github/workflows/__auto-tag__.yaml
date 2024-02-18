@@ -124,7 +124,7 @@ jobs:
           last-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
           target-branch: ${{ github.ref_name }}
           auto-changelog: "false"
-          notes-file: ${{ github.workspace }}/CHANGELOG.md
+          notes-file: CHANGELOG.md
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Extract tags
