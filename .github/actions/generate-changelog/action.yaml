@@ -69,51 +69,38 @@ runs:
                 {
                     'title': "💥 Breaking changes",
                     'regexp': r'^.*?(feat|chore|fix)!(?:\(\w+\))?!?: .+$',
-                    'order': 50
                 },
                 {
                     'title': "🚀 New Features",
                     'regexp': r'^.*?feat(?:\(\w+\))?!?: .+$',
-                    'order': 100
                 },
                 {
                     'title': "📦 Dependency updates",
                     'regexp': r'^.*?chore(?:\(\w+\))?!?: .+$',
-                    'order': 300
                 },
                 {
                     'title': "⚠️ Security updates",
                     'regexp': r'^.*?sec(?:\(\w+\))?!?: .+$',
-                    'order': 150
                 },
                 {
                     'title': "🐛 Bug fixes",
                     'regexp': r'^.*?(fix|refactor)(?:\(\w+\))?!?: .+$',
-                    'order': 200
                 },
                 {
                     'title': "🔨 Refactoring",
                     'regexp': r'^.*?refactor(?:\(\w+\))?!?: .+$',
-                    'order': 250
                 },
                 {
                     'title': "♻️ Revert changes",
                     'regexp': r'^.*?revert(?:\(\w+\))?!?: .+$',
-                    'order': 250
                 },
                 {
                     'title': "📚 Documentation updates",
                     'regexp': r'^.*?docs(?:\(\w+\))?!?: .+$',
-                    'order': 400
                 },
                 {
                     'title': "🏗️ Build process updates",
                     'regexp': r'^.*?(build|ci)(?:\(\w+\))?!?: .+$',
-                    'order': 400
-                },
-                {
-                    'title': "🧰 Other work",
-                    'order': 9999
                 }
             ]
         }
