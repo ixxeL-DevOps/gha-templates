@@ -90,7 +90,7 @@ def classify_commits(commits: List[str], groups: List[Dict[str, Optional[str]]])
 
 def clean_branch_info(branch_info):
     # Supprime "HEAD -> " et "origin/"
-    return re.sub(r'(HEAD -> \w+, |origin/\w+)', '', branch_info)
+    return re.sub(r'(\s?,?\s?HEAD -> \w+,?\s?|\s?,?\s?origin/\w+,?\s?)', '', branch_info)
 
 
 def replace_pull_requests(message, repo_url):
