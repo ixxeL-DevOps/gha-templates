@@ -108,7 +108,7 @@ jobs:
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
-          pattern: ${{ steps.regex-pattern.outputs.REGEX }}
+          pattern: "${{ steps.regex-pattern.outputs.REGEX }}"
           starting-tag: ""
 
       - name: Substitute ref
