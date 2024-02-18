@@ -137,7 +137,7 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
-      - name: Calculate last and next tag
+      - name: Calculate current and next tag
         id: svu
         uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
         with:
@@ -145,7 +145,7 @@ jobs:
           component: ${{ inputs.component }}
           prerelease: ${{ inputs.prerelease }}
 
-      - name: Get last tag
+      - name: Get last tag (Release Candidate)
         id: get-last-tag-rc
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         if: inputs.prerelease == 'true'
@@ -154,8 +154,8 @@ jobs:
           branch: ${{ github.ref_name }}
           pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
 
-      - name: Get last tag
-        id: get-last-tag
+      - name: Get last tag (General Availability)
+        id: get-last-tag-ga
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         if: inputs.prerelease == 'false'
         with:
@@ -238,7 +238,7 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
-          lower-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
+          lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || '' }}
           upper-tag: ${{ steps.svu.outputs.VERSION }}
       - name: GH Release
         id: gh-release
@@ -248,7 +248,7 @@ jobs:
           tag: ${{ steps.svu.outputs.VERSION }}
           target-branch: ${{ github.ref_name }}
           verify-tag: "true"
-          last-tag: ${{ steps.svu.outputs.LAST_TAG  != '' && steps.svu.outputs.LAST_TAG  || '' }}
+          last-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || '' }}
           auto-changelog: "false"
           notes-file: ${{ github.workspace }}/CHANGELOG.md
           prerelease: ${{ inputs.prerelease }}

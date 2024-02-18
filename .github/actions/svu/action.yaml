@@ -74,7 +74,7 @@ runs:
           echo -e "${CYAN}[ INFO ] > Final Release mode activated${BLANK}"
         fi
 
-        echo -e "${YELLOW}[ EXECUTING ] > Calculating last and next tag${BLANK}"
+        echo -e "${YELLOW}[ EXECUTING ] > Calculating current and next tag${BLANK}"
         LAST_TAG=$(svu current --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*${PRERELEASE_PATTERN}" --directory=${{ inputs.workingdir }})
         if [ $? -ne 0 ]
         then
@@ -108,11 +108,11 @@ runs:
         fi
         if [ "${LAST_TAG}" == "${VERSION}" ]
         then
-          echo -e "${RED}[ ERROR ] > Last tag ${YELLOW}${LAST_TAG}${RED} is same as new tag ${YELLOW}${VERSION}${BLANK}"
+          echo -e "${RED}[ ERROR ] > Current tag ${YELLOW}${LAST_TAG}${RED} is same as new tag ${YELLOW}${VERSION}${BLANK}"
           echo -e "${RED}[ ERROR ] > You are trying to release a version already existing. Check that your commit messages trigger a bump (fix, feat) or that you are not on the same commit-sha.${BLANK}"
           exit 1
         fi
-        echo -e "${CYAN}[ INFO ] > Last tag is ${PURPLE}${LAST_TAG}${BLANK}"
+        echo -e "${CYAN}[ INFO ] > Current tag is ${PURPLE}${LAST_TAG}${BLANK}"
         echo -e "${CYAN}[ INFO ] > New tag is ${PURPLE}${VERSION}${BLANK}"
         echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
