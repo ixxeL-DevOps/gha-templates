@@ -1,0 +1,208 @@
+---
+name: Releasing docker image
+on:
+  workflow_call:
+    secrets:
+      docker-io-pwd:
+        required: false
+      registry-password:
+        required: false
+      git-token:
+        required: false
+    inputs:
+      # General
+      publish:
+        required: false
+        default: "false"
+        type: string
+      prerelease:
+        required: false
+        default: "false"
+        type: string
+      build-image:
+        required: false
+        default: ixxel/toolbox:builder-latest
+        type: string
+      workingdir:
+        required: false
+        default: .
+        type: string
+      img-name:
+        required: true
+        type: string
+      tag:
+        required: false
+        type: string
+      build-arg:
+        required: false
+        default: "CI=true"
+        type: string
+      target-dir:
+        required: false
+        default: artefacts
+        type: string
+      component:
+        required: false
+        type: string
+      # docker login
+      docker-config:
+        required: false
+        default: true
+        type: boolean
+      registry-url:
+        required: true
+        type: string
+      registry-username:
+        required: true
+        type: string
+      # podman-password:
+      #   required: true
+      #   type: string
+      tls-verify:
+        required: false
+        type: boolean
+      # buildkit
+      dockerfile-name:
+        required: false
+        default: Dockerfile
+        type: string
+      caching:
+        required: false
+        default: true
+        type: boolean
+      cache-registry:
+        required: false
+        type: string
+      push:
+        description: Push img
+        required: false
+        default: true
+        type: boolean
+      # git tag
+      git-workdir:
+        required: false
+        default: .
+        type: string
+      tag-msg:
+        required: false
+        default: "ci"
+        type: string
+      push-option:
+        required: false
+        default: ci.skip
+        type: string
+      git-email:
+        required: false
+        default: test@mail.com
+        type: string
+        # repo-url:
+        #   required: true
+      release-verify-tag:
+        required: false
+        default: false
+        type: boolean
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  releasing:
+    name: Build
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    # container:
+    #   image: ${{ inputs.build-image }}
+    #   options: --privileged
+    steps:
+      - name: Clone code
+        id: clone
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+          token: ${{ secrets.git-token }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.registry-url }}
+          username: ${{ inputs.registry-username }}
+          password: ${{ secrets.registry-password }}
+          logout: false
+      - name: Git config
+        id: git-config
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+      - name: Calculate current and next tag
+        id: svu
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          prerelease: ${{ inputs.prerelease }}
+
+      - name: Get last tag (Release Candidate)
+        id: get-last-tag-rc
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        if: inputs.prerelease == 'true'
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+          branch: ${{ github.ref_name }}
+          pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
+          starting-tag: ""
+
+      - name: Get last tag (General Availability)
+        id: get-last-tag-ga
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        if: inputs.prerelease == 'false'
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+          branch: ${{ github.ref_name }}
+          pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
+          starting-tag: ""
+
+      - name: Hadolint Dockerfile Scan
+        uses: hadolint/hadolint-action@v3.1.0
+        id: hadolint
+        if: inputs.publish == 'false'
+        continue-on-error: true
+        with:
+          dockerfile: ${{ inputs.workingdir }}/Dockerfile
+          verbose: true
+          failure-threshold: info
+      - name: Update PR
+        uses: actions/github-script@v6
+        if: inputs.publish == 'false' && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `
+            #### Hadolint: \`${{ steps.hadolint.outcome }}\`
+            \`\`\`
+            ${process.env.HADOLINT_RESULTS}
+            \`\`\`
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+      - name: Build Docker img
+        uses: docker/build-push-action@v5
+        if: (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
+        with:
+          context: ${{ inputs.workingdir }}
+          platforms: linux/amd64
+          push: true
+          sbom: false
+          provenance: false
+          cache-from: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache
+          cache-to: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache,mode=max
+          build-args: |
+            ${{ inputs.build-arg }}
+          tags: |
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ github.event.pull_request.number }}
