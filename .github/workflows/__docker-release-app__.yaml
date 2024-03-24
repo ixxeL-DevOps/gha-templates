@@ -191,7 +191,7 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
-      - name: Build Docker img
+      - name: Build Docker img [PR]
         uses: docker/build-push-action@v5
         if: (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
         with:
@@ -217,12 +217,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Validate PR ORIGIN
-        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
-        run: |
-          echo "The Commit is actually comming from a PR"
-
-      - name: Validate PR ORIGIN
+      - name: Build Docker img [Trunk]
+        uses: docker/build-push-action@v5
         if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER == ''
-        run: |
-          echo "The Commit is NOT comming from a PR"
+        with:
+          context: ${{ inputs.workingdir }}
+          platforms: linux/amd64
+          push: true
+          sbom: false
+          provenance: false
+          cache-from: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache
+          cache-to: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache,mode=max
+          build-args: |
+            ${{ inputs.build-arg }}
+          tags: |
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ github.sha }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
+
+      - name: Skopeo retag [ Artefact promotion ]
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
+        uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@main
+        id: skopeo-retag
+        with:
+          registry-url: ${{ inputs.registry-url }}
+          registry-username: ${{ inputs.registry-username }}
+          registry-password: ${{ secrets.registry-password }}
+          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ steps.pr-origin.outputs.PR_NUMBER }}
+          dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ github.sha }}

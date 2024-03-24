@@ -22,16 +22,16 @@ runs:
         echo -e "${CYAN}[ INFO ] > gh version.${BLANK}"
         gh --version
 
-        echo -e "${YELLOW}[ EXECUTING ] > Cancelling workflow run ${{ inputs.run-id }}${BLANK}"
+        echo -e "${YELLOW}[ EXECUTING ] > Finding PR origin for commit ${{ inputs.commit }}${BLANK}"
         PR=$(gh pr list --search "${{ inputs.commit }}" --state merged --json url --jq '.[0].url')
 
         if [ -n "$PR" ]
         then
           PR_NUMBER=$(echo "$PR" | awk -F '/' '{print $NF}')
-          echo -e "${YELLOW}[ INFO ] > Commit ${PURPLE}${{ inputs.commit }}${YELLOW} is associated with PR number ${PURPLE}${PR_NUMBER}${BLANK}"
+          echo -e "${CYAN}[ INFO ] > Commit ${PURPLE}${{ inputs.commit }}${CYAN} is associated with PR number ${PURPLE}${PR_NUMBER}${BLANK}"
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
         else
-          echo -e "${YELLOW}[ INFO ] > Commit ${PURPLE}${{ inputs.commit }}${YELLOW} is not associated with a Pull Request${BLANK}"
+          echo -e "${CYAN}[ INFO ] > Commit ${PURPLE}${{ inputs.commit }}${CYAN} is not associated with a Pull Request${BLANK}"
         fi
       shell: bash
       env:
