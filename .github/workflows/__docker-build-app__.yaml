@@ -195,7 +195,7 @@ jobs:
             ${{ inputs.build-arg }}
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ github.event.pull_request.number }}
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.event.pull_request.head.sha }}
 
       - name: Build Docker img [Trunk]
         uses: docker/build-push-action@v5
@@ -212,7 +212,6 @@ jobs:
             ${{ inputs.build-arg }}
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
 
       - name: Skopeo retag [ Artefact promotion ]
         if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
