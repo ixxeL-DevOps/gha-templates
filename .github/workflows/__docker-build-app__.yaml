@@ -120,61 +120,25 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ inputs.registry-url }}
-          username: ${{ inputs.registry-username }}
-          password: ${{ secrets.registry-password }}
-          logout: false
+
       - name: Git config
         id: git-config
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
-      - name: Calculate current and next tag
-        id: svu
-        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
-        with:
-          workingdir: ${{ inputs.workingdir }}
-          prerelease: ${{ inputs.prerelease }}
-
-      - name: Get last tag (Release Candidate)
-        id: get-last-tag-rc
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
-        if: inputs.prerelease == 'true'
-        with:
-          git-workdir: ${{ inputs.git-workdir }}
-          branch: ${{ github.ref_name }}
-          pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
-          starting-tag: ""
-
-      - name: Get last tag (General Availability)
-        id: get-last-tag-ga
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
-        if: inputs.prerelease == 'false'
-        with:
-          git-workdir: ${{ inputs.git-workdir }}
-          branch: ${{ github.ref_name }}
-          pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
-          starting-tag: ""
 
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
         id: hadolint
-        if: inputs.publish == 'false'
         continue-on-error: true
         with:
           dockerfile: ${{ inputs.workingdir }}/Dockerfile
           verbose: true
           failure-threshold: info
+
       - name: Update PR
         uses: actions/github-script@v6
-        if: inputs.publish == 'false' && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -191,9 +155,34 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
+
+      - name: Check PR origin
+        if: github.event_name != 'pull_request'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-pr-origin@main
+        id: pr-origin
+        with:
+          commit: ${{ github.sha }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Set up QEMU
+        if: github.event_name == 'pull_request' || steps.pr-origin.outputs.PR_NUMBER == ''
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        if: github.event_name == 'pull_request' || steps.pr-origin.outputs.PR_NUMBER == ''
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Registry
+        if: github.event_name == 'pull_request' || steps.pr-origin.outputs.PR_NUMBER == ''
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.registry-url }}
+          username: ${{ inputs.registry-username }}
+          password: ${{ secrets.registry-password }}
+          logout: false
+
       - name: Build Docker img [PR]
         uses: docker/build-push-action@v5
-        if: (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'
         with:
           context: ${{ inputs.workingdir }}
           platforms: linux/amd64
@@ -206,16 +195,7 @@ jobs:
             ${{ inputs.build-arg }}
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ github.event.pull_request.number }}
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ github.sha }}
-
-      - name: Check PR origin
-        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-pr-origin@main
-        id: pr-origin
-        with:
-          commit: ${{ github.sha }}
-        env:
-          GH_TOKEN: ${{ github.token }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
 
       - name: Build Docker img [Trunk]
         uses: docker/build-push-action@v5
@@ -231,7 +211,7 @@ jobs:
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ github.sha }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
 
       - name: Skopeo retag [ Artefact promotion ]
@@ -243,4 +223,4 @@ jobs:
           registry-username: ${{ inputs.registry-username }}
           registry-password: ${{ secrets.registry-password }}
           src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ steps.pr-origin.outputs.PR_NUMBER }}
-          dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ github.sha }}
+          dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
