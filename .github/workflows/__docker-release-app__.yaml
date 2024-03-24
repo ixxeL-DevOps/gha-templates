@@ -207,3 +207,10 @@ jobs:
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ github.event.pull_request.number }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ github.sha }}
+
+      - name: Check PR origin
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request'
+        run: |
+          gh pr list --search "${{ github.sha }}" --state merged --json url --jq '.[0].url'
+        env:
+          GH_TOKEN: ${{ github.token }}
