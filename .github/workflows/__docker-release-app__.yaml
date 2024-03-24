@@ -206,3 +206,4 @@ jobs:
             ${{ inputs.build-arg }}
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ github.event.pull_request.number }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ github.sha }}
