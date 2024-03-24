@@ -1,0 +1,56 @@
+---
+name: Docker Release application
+on:
+  workflow_call:
+    secrets:
+      git-token:
+        required: false
+      registry-password:
+        required: false
+    inputs:
+      workingdir:
+        required: false
+        default: .
+        type: string
+      build-image:
+        required: false
+        default: ixxel/toolbox:builder-latest
+        type: string
+      component:
+        required: false
+        type: string
+      img-name:
+        required: false
+        type: string
+      cache-registry:
+        required: false
+        default: docker.io/ixxel
+        type: string
+      registry-url:
+        required: false
+        default: docker.io
+        type: string
+      registry-username:
+        required: false
+        type: string
+      prerelease:
+        required: false
+        default: "false"
+        type: string
+
+jobs:
+  docker-release:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    uses: ixxeL-DevOps/gha-templates/.github/workflows/__docker-release-app__.yaml@main
+    with:
+      workingdir: ${{ inputs.workingdir }}
+      img-name: ${{ inputs.img-name }}
+      cache-registry: ${{ inputs.cache-registry }}
+      registry-url: ${{ inputs.registry-url }}
+      registry-username: ${{ inputs.registry-username }}
+      prerelease: ${{ inputs.prerelease }}
+    secrets:
+      git-token: ${{ secrets.git-token }}
+      registry-password: ${{ secrets.registry-password }}
