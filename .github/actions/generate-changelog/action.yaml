@@ -118,7 +118,7 @@ runs:
             classified_commits['🧰 Other work'] = []
 
             for commit, tags in commits.items():
-                commit_message = commit.message.strip() if commit else None
+                commit_message = (commit.message.split('\n', 1)[0]).strip() if commit else None
 
                 matched_group = next((group for group in groups if group.get('regexp') and re.match(group['regexp'], commit_message)), None)
 
@@ -184,8 +184,9 @@ runs:
                             [f'[🏷 {str(tag)}]({repo_url}/tree/{str(tag)})' for tag in
                             tags])) if tags else ""
 
-                        print(f"SHA: {commit.hexsha}, MSG: {commit.message.strip()}, AUTHOR: {gh_user_dict[commit.author.name]}, EMAIL: {commit.author.email}, TAGS: {tags_info}")
-                        markdown += "* {}: {} by (@{}){}\n".format(commit.hexsha, commit.message.strip(), gh_user_dict[commit.author.name], tags_info)
+                        commit_msg = (commit.message.split('\n', 1)[0]).strip()
+                        print(f"SHA: {commit.hexsha}, MSG: {commit_msg}, AUTHOR: {gh_user_dict[commit.author.name]}, EMAIL: {commit.author.email}, TAGS: {tags_info}")
+                        markdown += "* {}: {} by (@{}){}\n".format(commit.hexsha, commit_msg, gh_user_dict[commit.author.name], tags_info)
                     markdown += "\n"
             markdown += "**Full Changelog**: {}/compare/{}...{}".format(repo_url, lower_tag, upper_tag)
             return markdown
@@ -219,8 +220,8 @@ runs:
             commits_data = {commit: tagmap.get(commit, []) for commit in repo.iter_commits(f"{lower_tag}...{upper_tag}")}
 
             for commit, tags in commits_data.items():
-                print(f"Commit : {commit} Tags: {tags}")
-                print(type(commit), type(tags), type(next(iter(tags), None)))
+                commit_msg = commit.message.split('\n', 1)[0]
+                print(f"Commit : {commit} Msg: {commit_msg} Tags: {tags}")
 
             config = merge_configs(DEFAULT_CONFIG, load_user_config(config_file))
 

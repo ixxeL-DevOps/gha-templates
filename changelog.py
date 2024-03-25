@@ -1,175 +1,180 @@
+#!/usr/bin/env python3
+
 import subprocess
 import yaml
 import re
-from typing import List, Dict, Optional
+import os
+import git
+import github
+from github import Auth
+
+_gh = None
 
 DEFAULT_CONFIG = {
     'groups': [
         {
             'title': "💥 Breaking changes",
-            'regexp': '^.*?(feat|chore|fix)!(?:\(\w+\))?!?: .+$',
-            'order': 50
+            'regexp': r'^.*?(feat|chore|fix)!(?:\(\w+\))?!?: .+$',
         },
         {
             'title': "🚀 New Features",
-            'regexp': '^.*?feat(?:\(\w+\))?!?: .+$',
-            'order': 100
+            'regexp': r'^.*?feat(?:\(\w+\))?!?: .+$',
         },
         {
             'title': "📦 Dependency updates",
-            'regexp': '^.*?chore(?:\(\w+\))?!?: .+$',
-            'order': 300
+            'regexp': r'^.*?chore(?:\(\w+\))?!?: .+$',
         },
         {
             'title': "⚠️ Security updates",
-            'regexp': '^.*?sec(?:\(\w+\))?!?: .+$',
-            'order': 150
+            'regexp': r'^.*?sec(?:\(\w+\))?!?: .+$',
         },
         {
             'title': "🐛 Bug fixes",
-            'regexp': '^.*?(fix|refactor)(?:\(\w+\))?!?: .+$',
-            'order': 200
+            'regexp': r'^.*?(fix|refactor)(?:\(\w+\))?!?: .+$',
         },
         {
             'title': "🔨 Refactoring",
-            'regexp': '^.*?refactor(?:\(\w+\))?!?: .+$',
-            'order': 250
+            'regexp': r'^.*?refactor(?:\(\w+\))?!?: .+$',
         },
         {
             'title': "♻️ Revert changes",
-            'regexp': '^.*?revert(?:\(\w+\))?!?: .+$',
-            'order': 250
+            'regexp': r'^.*?revert(?:\(\w+\))?!?: .+$',
         },
         {
             'title': "📚 Documentation updates",
-            'regexp': '^.*?docs(?:\(\w+\))?!?: .+$',
-            'order': 400
+            'regexp': r'^.*?docs(?:\(\w+\))?!?: .+$',
         },
         {
             'title': "🏗️ Build process updates",
-            'regexp': '^.*?(build|ci)(?:\(\w+\))?!?: .+$',
-            'order': 400
-        },
-        {
-            'title': "🧰 Other work",
-            'order': 9999
+            'regexp': r'^.*?(build|ci)(?:\(\w+\))?!?: .+$',
         }
     ]
 }
 
-
-def run_command(command: List[str]) -> str:
-    result = subprocess.run(command, stdout=subprocess.PIPE, text=True)
-    return result.stdout.strip()
-
-
-def run_command_list(command: List[str]) -> List[str]:
-    result = subprocess.run(command, stdout=subprocess.PIPE, text=True)
-    return result.stdout.strip().split('\n')
-
-
-def classify_commits(commits: List[str], groups: List[Dict[str, Optional[str]]]) -> Dict[str, List[str]]:
+def classify_commits(commits: dict[git.Commit, list[git.TagReference]], groups: list[dict[str, str]]) -> dict[str, list[tuple[git.Commit, list[git.TagReference]]]]:
     classified_commits = {group['title']: [] for group in groups}
     classified_commits['🧰 Other work'] = []
 
-    for commit in commits:
-        matched = False
-        for group in groups:
-            regexp = group.get('regexp')
-            if regexp and commit and commit.strip() and re.match(regexp, commit):
-                classified_commits[group['title']].append(commit)
-                print(f"Commit identified as : {classified_commits[group['title']]}")
-                print(f"Group : {group}\n")
-                matched = True
-                break
+    for commit, tags in commits.items():
+        commit_message = (commit.message.split('\n', 1)[0]).strip() if commit else None
 
-        if not matched:
-            classified_commits['🧰 Other work'].append(commit)
+        matched_group = next((group for group in groups if group.get('regexp') and re.match(group['regexp'], commit_message)), None)
+
+        if matched_group:
+            classified_commits.get(matched_group['title']).append((commit, tags))
+            print(f"Commit identified as: {commit_message}")
+            print(f"Group: {matched_group}\n")
+        else:
+            classified_commits.get('🧰 Other work').append((commit, tags))
 
     return classified_commits
 
-def clean_branch_info(branch_info):
-    # Supprime "HEAD -> " et "origin/"
-    return re.sub(r'(\s?,?\s?HEAD -> \w+,?\s?|\s?,?\s?origin/\w+,?\s?)', '', branch_info)
 
-
-def replace_pull_requests(message, repo_url):
+def replace_pull_requests(message: str, repo_url: str) -> str:
     def replace(match):
         pull_number = match.group(1)
         return f'in ({repo_url}/pull/{pull_number})'
 
     return re.sub(r'\(#(\d+)\)$', replace, message)
 
+def gh_instantiate(token: str) -> github.Github:
+    if token:
+        auth = Auth.Token(token)
+        gh = github.Github(auth=auth)
+        return gh
+    else:
+        gh = github.Github()
+        return gh
 
-def generate_markdown(classified_commits, lower_tag, upper_tag, repo_url):
+
+def get_gh_username(author: str, gh_users: dict, email: str = "", access_token: str = "") -> str:
+    global _gh
+
+    if not _gh:
+        _gh = gh_instantiate(access_token)
+    if author in gh_users:
+        return ""
+    if author == "dependabot[bot]":
+        return "dependabot[bot]"
+    users = _gh.search_users(author)
+    try:
+        if len(list(users)) > 1:
+            gh_user = users[0].login
+            return gh_user
+        else:
+            gh_user = users[0].login
+            return gh_user
+    except IndexError:
+        print(f"No user found for author: {author}")
+        return ""
+
+
+def generate_markdown(classified_commits: dict[str, list[tuple[git.Commit, list[git.TagReference]]]], lower_tag: str, upper_tag: str, repo_url: str, access_token: str = "") -> str:
     markdown = "## Changelog\n"
-    pattern = r'^([a-f0-9]+) (.+?) @(.+?)\s*(\(tag: (.+?)\))?$'
+    gh_user_dict = {}
 
-    for title, commits in classified_commits.items():
-        if commits:
+    for title, commits_data_list in classified_commits.items():
+        if commits_data_list:
             markdown += "### {}\n".format(title)
-            for commit in commits:
-                commit = clean_branch_info(commit)
-                match = re.match(pattern, commit)
-                if match:
-                    sha, rest, author, _, tags = match.groups()
-                    rest = replace_pull_requests(rest, repo_url)
-                    print(f"SHA: {sha}, REST: {rest}, AUTHOR: {author}, TAGS: {tags}")
+            for commit, tags in commits_data_list:
+                gh_author = get_gh_username(commit.author.name, gh_user_dict, commit.author.email, access_token)
+                if gh_author:
+                    gh_user_dict[commit.author.name] = gh_author
 
-                    # Modification pour gérer plusieurs tags
-                    tag_list = tags.split(', ') if tags else []
-                    tags_info = " {}".format(' '.join(
-                        [f'[🏷 {tag}]({repo_url}/tree/{tag.replace("tag: ", "")})' for tag in
-                         tag_list])) if tag_list else ""
+                tags_info = " {}".format(' '.join(
+                    [f'[🏷 {str(tag)}]({repo_url}/tree/{str(tag)})' for tag in
+                    tags])) if tags else ""
 
-                    # Modification pour générer des liens sans " tag: "
-                    tags_info = tags_info.replace(" tag: ", "")
-
-                    markdown += "* {}: {} by (@{}){}\n".format(sha, rest, author, tags_info)
-                else:
-                    print(f"Commit excluded: {commit}")
+                commit_msg = (commit.message.split('\n', 1)[0]).strip()
+                print(f"SHA: {commit.hexsha}, MSG: {commit_msg}, AUTHOR: {gh_user_dict[commit.author.name]}, EMAIL: {commit.author.email}, TAGS: {tags_info}")
+                markdown += "* {}: {} by (@{}){}\n".format(commit.hexsha, commit_msg, gh_user_dict[commit.author.name], tags_info)
             markdown += "\n"
-
     markdown += "**Full Changelog**: {}/compare/{}...{}".format(repo_url, lower_tag, upper_tag)
     return markdown
 
 
-def load_user_config(file_path):
+def load_user_config(file_path: str) -> dict:
     try:
         with open(file_path, 'r') as config_file:
             return yaml.safe_load(config_file)
     except FileNotFoundError:
         return {}
 
-def merge_configs(default_config, user_config):
+def merge_configs(default_config: dict, user_config: dict) -> dict:
     merged_config = default_config.copy()
     merged_config.update(user_config)
     return merged_config
 
 def main():
-    lower_tag = "v0.16.0"
-    upper_tag = "v0.17.0"
-    repo_url = "https://github.com/ixxeL-DevOps/gha-templates"
+    lower_tag = "v0.1.0"
+    upper_tag = "v0.2.0"
+    repo_url = "https://github.com/ixxeL-DevOps/demo-web-py.git"
+    access_token = ""
 
-    config_file = ".config-changelog.yml"
+    config_file = ".config.yaml"
 
-    user_config = load_user_config(config_file)
-    config = merge_configs(DEFAULT_CONFIG, user_config)
+    repo = git.Repo(os.getcwd())
+    tagmap = {}
 
-    commits = run_command_list(['git', 'log', f'{lower_tag}..{upper_tag}', '--pretty=format:%H %s @%an %d'])
-    for commit in commits:
-        print(commit)
-    print("\n")
+    for tag in repo.tags:
+        tagmap.setdefault(repo.commit(tag), []).append(tag)
 
-    classified_commits = classify_commits(commits, config['groups'])
+    commits_data = {commit: tagmap.get(commit, []) for commit in repo.iter_commits(f"{lower_tag}...{upper_tag}")}
 
-    final_markdown = generate_markdown(classified_commits, lower_tag, upper_tag, repo_url)
+    for commit, tags in commits_data.items():
+        commit_msg = commit.message.split('\n', 1)[0]
+        print(f"Commit : {commit} Msg: {commit_msg} Tags: {tags}")
+
+    config = merge_configs(DEFAULT_CONFIG, load_user_config(config_file))
+
+    classified_commits = classify_commits(commits_data, config['groups'])
+
+    final_markdown = generate_markdown(classified_commits, lower_tag, upper_tag, repo_url, access_token)
 
     print(final_markdown)
 
     with open('CHANGELOG.md', 'w') as file:
         file.write(final_markdown)
-
 
 if __name__ == "__main__":
     main()
