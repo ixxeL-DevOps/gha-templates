@@ -17,6 +17,10 @@ on:
         required: false
         default: false
         type: boolean
+      prerelease:
+        required: false
+        default: "false"
+        type: string
       workingdir:
         required: false
         type: string
@@ -361,13 +365,15 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
-      - name: Update changelog
-        id: changelog
+      - name: Get last tag
+        id: get-last-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         if: (inputs.auto-update-chart == 'true') && (inputs.release)
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
-          workingdir: ${{ inputs.workingdir }}
-          release-name: ${{ steps.bump-version.outputs.VERSION }}
+          git-workdir: ${{ inputs.git-workdir }}
+          branch: ${{ github.ref_name }}
+          pattern: "${{ env.COMPONENT_NAME }}-v?[0-9]{1,2}\\.[0-9]{1,3}\\.[0-9]{1,3}$"
+          starting-tag: ""
       - name: Git push
         id: git-push
         if: (inputs.auto-update-chart == 'true') && (inputs.release)
@@ -378,13 +384,36 @@ jobs:
           git-workdir: ${{ inputs.git-workdir }}
           git-staging-dir: ${{ inputs.workingdir }}
           push-option: ${{ inputs.push-option }}
+
+      - name: Git tag
+        id: git-tag
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
+        with:
+          tag-value: "${{ env.COMPONENT_NAME }}-${{ steps.bump-version.outputs.VERSION }}"
+          commit-sha: ${{ github.ref_name }}
+          git-workdir: ${{ inputs.git-workdir }}
+          force-tag: "false"
+
+      - name: Update changelog
+        id: changelog
+        if: (inputs.auto-update-chart == 'true') && (inputs.release)
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          lower-tag: ${{ steps.get-last-tag.outputs.LAST_TAG || '' }}
+          upper-tag: "${{ env.COMPONENT_NAME }}-${{ steps.bump-version.outputs.VERSION }}"
+
       - name: "\U0001F680 GH Release"
         id: gh-release
         if: (inputs.auto-tag-repo == 'true') && (inputs.auto-update-chart == 'true') && (inputs.release)
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
-          tag: ${{ env.COMPONENT_NAME }}-${{ steps.bump-version.outputs.VERSION }}
-          verify-tag: ${{ inputs.release-verify-tag }}
-          target-branch: ${{ inputs.release-target-branch }}
+          tag: "${{ env.COMPONENT_NAME }}-${{ steps.bump-version.outputs.VERSION }}"
+          target-branch: ${{ github.ref_name }}
+          verify-tag: "true"
+          last-tag: ${{ steps.get-last-tag.outputs.LAST_TAG || '' }}
+          auto-changelog: "false"
+          notes-file: ${{ github.workspace }}/CHANGELOG.md
+          prerelease: ${{ inputs.prerelease }}
         env:
           GH_TOKEN: ${{ github.token }}
