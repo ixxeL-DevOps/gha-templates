@@ -1,5 +1,5 @@
 ---
-name: Releasing docker image
+name: Building docker image
 on:
   workflow_call:
     secrets:
@@ -11,10 +11,6 @@ on:
         required: false
     inputs:
       # General
-      retag-binary:
-        required: false
-        type: string
-        default: "crane"
       prerelease:
         required: false
         default: "false"
@@ -106,7 +102,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  build-app:
+  build-img:
     name: Build
     timeout-minutes: 15
     runs-on: ubuntu-latest
@@ -150,23 +146,11 @@ jobs:
               body: output
             })
 
-      - name: Check PR origin
-        if: github.event_name != 'pull_request'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-pr-origin@main
-        id: pr-origin
-        with:
-          commit: ${{ github.sha }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-
       - name: Set up QEMU
-        if: github.event_name == 'pull_request' || steps.pr-origin.outputs.PR_NUMBER == ''
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        if: github.event_name == 'pull_request' || steps.pr-origin.outputs.PR_NUMBER == ''
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Registry
-        if: github.event_name == 'pull_request' || steps.pr-origin.outputs.PR_NUMBER == ''
         uses: docker/login-action@v3
         with:
           registry: ${{ inputs.registry-url }}
@@ -180,7 +164,8 @@ jobs:
         with:
           context: ${{ inputs.workingdir }}
           platforms: linux/amd64
-          push: true
+          push: false
+          load: true
           sbom: false
           provenance: false
           cache-from: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache
@@ -189,11 +174,20 @@ jobs:
             ${{ inputs.build-arg }}
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ github.event.pull_request.number }}
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.event.pull_request.head.sha }}
+
+      - name: Calculate current and next tag
+        id: svu
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
+        if: github.event_name != 'pull_request'
+        with:
+          workingdir: ${{ inputs.workingdir }}
+          component: ${{ inputs.component }}
+          prerelease: ${{ inputs.prerelease }}
+          build: "true"
 
       - name: Build Docker img [Trunk]
         uses: docker/build-push-action@v5
-        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER == ''
+        if: github.event_name != 'pull_request'
         with:
           context: ${{ inputs.workingdir }}
           platforms: linux/amd64
@@ -206,25 +200,5 @@ jobs:
             ${{ inputs.build-arg }}
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
 
-      - name: Skopeo retag [ Artefact promotion ]
-        if: inputs.retag-binary == 'skopeo' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
-        uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@main
-        id: skopeo-retag
-        with:
-          registry-url: ${{ inputs.registry-url }}
-          registry-username: ${{ inputs.registry-username }}
-          registry-password: ${{ secrets.registry-password }}
-          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ steps.pr-origin.outputs.PR_NUMBER }}
-          dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
-
-      - name: Crane retag [ Artefact promotion ]
-        if: inputs.retag-binary == 'crane' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
-        uses: ixxeL-DevOps/gha-templates/.github/actions/crane-retag@main
-        id: crane-retag
-        with:
-          registry-url: ${{ inputs.registry-url }}
-          registry-username: ${{ inputs.registry-username }}
-          registry-password: ${{ secrets.registry-password }}
-          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ steps.pr-origin.outputs.PR_NUMBER }}
-          dst-tag: sha-${{ github.sha }}

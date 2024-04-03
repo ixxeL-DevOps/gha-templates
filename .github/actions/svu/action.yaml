@@ -15,6 +15,14 @@ inputs:
     required: false
     default: ""
     description: note file or stdin
+  build:
+    required: false
+    default: "false"
+    description: use build
+  build-pattern:
+    required: false
+    default: "build"
+    description: build pattern to use
   prerelease:
     required: false
     default: "false"
@@ -66,12 +74,15 @@ runs:
         then
           COMPONENT="${{ inputs.component }}-"
         fi
-        if [ "${{ inputs.prerelease }}" == "true" ]
+        if [ "${{ inputs.build }}" == "true" ]
+        then
+          echo -e "${CYAN}[ INFO ] > Build mode activated${BLANK}"
+        elif [ "${{ inputs.prerelease }}" == "true" ]
         then
           echo -e "${CYAN}[ INFO ] > Prerelease mode activated${BLANK}"
           PRERELEASE_PATTERN="-${{ inputs.prerelease-pattern }}*"
         else
-          echo -e "${CYAN}[ INFO ] > Final Release mode activated${BLANK}"
+          echo -e "${CYAN}[ INFO ] > General Availability mode activated${BLANK}"
         fi
 
         echo -e "${YELLOW}[ EXECUTING ] > Calculating current and next tag${BLANK}"
@@ -79,7 +90,10 @@ runs:
         if [ $? -ne 0 ]
         then
           CURRENT_TAG=""
-          if [ "${{ inputs.prerelease }}" == "true" ]
+          if [ "${{ inputs.build }}" == "true" ]
+          then
+            NEW_TAG="$(svu next --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})-build-${{ github.run_number }}"
+          elif [ "${{ inputs.prerelease }}" == "true" ]
           then
             CURRENT_TAG=$(svu current --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
             if [ $? -ne 0 ]
@@ -90,7 +104,7 @@ runs:
               NEW_TAG=$(svu prerelease --pre-release=${{ inputs.prerelease-pattern }} --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
               if [ "$(echo "$NEW_TAG" | awk -F "$PRERELEASE_PATTERN" '{print $1}')" == "$CURRENT_TAG" ]
               then
-                echo -e "${RED}[ ERROR ] > Cancel to avoid irrelevant RC ${YELLOW}($NEW_TAG)${RED} and GA ${YELLOW}($CURRENT_TAG)${RED} version${BLANK}"
+                echo -e "${RED}[ ERROR ] > Cancel to avoid irrelevant RC ${YELLOW}($NEW_TAG)${PURPLE} and GA ${YELLOW}($CURRENT_TAG)${PURPLE} version${BLANK}"
                 echo -e "${RED}[ ERROR ] > You are trying to release a RC version not aligned with current GA version. Check that your commit messages trigger a bump (fix, feat) or that you are not on the same commit-sha.${BLANK}"
                 exit 1
               fi
@@ -99,7 +113,10 @@ runs:
             NEW_TAG="${COMPONENT}v0.1.0"
           fi
         else
-          if [ "${{ inputs.prerelease }}" == "true" ]
+          if [ "${{ inputs.build }}" == "true" ]
+          then
+            NEW_TAG="$(svu next --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})-build-${{ github.run_number }}"
+          elif [ "${{ inputs.prerelease }}" == "true" ]
           then
             NEW_TAG=$(svu prerelease --pre-release=${{ inputs.prerelease-pattern }} --prefix="${COMPONENT}v" --pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --directory=${{ inputs.workingdir }})
           else
@@ -108,8 +125,8 @@ runs:
         fi
         if [ "${CURRENT_TAG}" == "${NEW_TAG}" ]
         then
-          echo -e "${RED}[ ERROR ] > Current tag ${YELLOW}${CURRENT_TAG}${RED} is same as new tag ${YELLOW}${NEW_TAG}${BLANK}"
-          echo -e "${RED}[ ERROR ] > You are trying to release a version already existing. Check that your commit messages trigger a bump (fix, feat) or that you are not on the same commit-sha.${BLANK}"
+          echo -e "${RED}[ ERROR ] > Current tag ${YELLOW}${CURRENT_TAG}${PURPLE} is same as new tag ${YELLOW}${NEW_TAG}${BLANK}"
+          echo -e "${RED}[ ERROR ] > You are trying to release a version already existing. Check that your commit messages trigger a bump (fix, feat, fix! and feat!) or that you are not on the same commit-sha.${BLANK}"
           exit 1
         fi
         echo -e "${CYAN}[ INFO ] > Current tag is ${PURPLE}${CURRENT_TAG}${BLANK}"

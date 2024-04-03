@@ -11,13 +11,25 @@ on:
         required: false
     inputs:
       # General
-      publish:
-        required: false
-        default: "false"
-        type: string
       prerelease:
         required: false
         default: "false"
+        type: string
+      component:
+        required: false
+        type: string
+      retag-binary:
+        required: false
+        type: string
+        default: "crane"
+      registry-url:
+        required: true
+        type: string
+      registry-username:
+        required: true
+        type: string
+      cache-registry:
+        required: false
         type: string
       build-image:
         required: false
@@ -30,54 +42,6 @@ on:
       img-name:
         required: true
         type: string
-      tag:
-        required: false
-        type: string
-      build-arg:
-        required: false
-        default: "CI=true"
-        type: string
-      target-dir:
-        required: false
-        default: artefacts
-        type: string
-      component:
-        required: false
-        type: string
-      # docker login
-      docker-config:
-        required: false
-        default: true
-        type: boolean
-      registry-url:
-        required: true
-        type: string
-      registry-username:
-        required: true
-        type: string
-      # podman-password:
-      #   required: true
-      #   type: string
-      tls-verify:
-        required: false
-        type: boolean
-      # buildkit
-      dockerfile-name:
-        required: false
-        default: Dockerfile
-        type: string
-      caching:
-        required: false
-        default: true
-        type: boolean
-      cache-registry:
-        required: false
-        type: string
-      push:
-        description: Push img
-        required: false
-        default: true
-        type: boolean
       # git tag
       git-workdir:
         required: false
@@ -95,8 +59,6 @@ on:
         required: false
         default: test@mail.com
         type: string
-        # repo-url:
-        #   required: true
       release-verify-tag:
         required: false
         default: false
@@ -120,23 +82,13 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Registry
-        uses: docker/login-action@v3
-        if: inputs.publish == 'true'
-        with:
-          registry: ${{ inputs.registry-url }}
-          username: ${{ inputs.registry-username }}
-          password: ${{ secrets.registry-password }}
-          logout: false
+
       - name: Git config
         id: git-config
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
+
       - name: Calculate current and next tag
         id: svu
         uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
@@ -144,6 +96,7 @@ jobs:
           workingdir: ${{ inputs.workingdir }}
           component: ${{ inputs.component }}
           prerelease: ${{ inputs.prerelease }}
+          build: "false"
 
       - name: Get last tag (Release Candidate)
         id: get-last-tag-rc
@@ -152,7 +105,7 @@ jobs:
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
-          pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
+          pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,3}\\.[0-9]{1,3}-rc\\.[0-9]+"
           starting-tag: ""
 
       - name: Get last tag (General Availability)
@@ -162,89 +115,50 @@ jobs:
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
-          pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
+          pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,3}\\.[0-9]{1,3}$"
           starting-tag: ""
 
-      - name: Hadolint Dockerfile Scan
-        uses: hadolint/hadolint-action@v3.1.0
-        id: hadolint
-        if: inputs.publish == 'false'
-        continue-on-error: true
+      - name: Skopeo retag [ Artefact promotion ]
+        uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@main
+        id: skopeo-retag
+        if: inputs.retag-binary == 'skopeo'
         with:
-          dockerfile: ${{ inputs.workingdir }}/Dockerfile
-          verbose: true
-          failure-threshold: info
-      - name: Update PR
-        uses: actions/github-script@v6
-        if: inputs.publish == 'false' && (github.ref != 'refs/heads/main' || github.ref != 'refs/heads/master') && github.event_name == 'pull_request'
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const output = `
-            #### Hadolint: \`${{ steps.hadolint.outcome }}\`
-            \`\`\`
-            ${process.env.HADOLINT_RESULTS}
-            \`\`\`
-            `;
+          registry-url: ${{ inputs.registry-url }}
+          registry-username: ${{ inputs.registry-username }}
+          registry-password: ${{ secrets.registry-password }}
+          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
+          dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-      - name: Build Docker img for test
-        uses: docker/build-push-action@v5
-        if: inputs.publish == 'false'
+      - name: Crane retag [ Artefact promotion ]
+        uses: ixxeL-DevOps/gha-templates/.github/actions/crane-retag@main
+        id: crane-retag
+        if: inputs.retag-binary == 'crane'
         with:
-          context: ${{ inputs.workingdir }}
-          platforms: linux/amd64
-          push: false
-          load: true
-          sbom: false
-          provenance: false
-          cache-from: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache
-          build-args: |
-            ${{ inputs.build-arg }}
-          tags: |
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
-      - name: Build and publish Docker img
-        uses: docker/build-push-action@v5
-        if: inputs.publish == 'true'
-        with:
-          context: ${{ inputs.workingdir }}
-          platforms: linux/amd64
-          push: true
-          sbom: false
-          provenance: false
-          cache-from: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache
-          cache-to: type=registry,ref=${{ inputs.cache-registry }}/${{ inputs.img-name }}:buildcache,mode=max
-          build-args: |
-            ${{ inputs.build-arg }}
-          tags: |
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:latest
+          registry-url: ${{ inputs.registry-url }}
+          registry-username: ${{ inputs.registry-username }}
+          registry-password: ${{ secrets.registry-password }}
+          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
+          dst-tag: ${{ steps.svu.outputs.NEW_TAG }}
+
       - name: Git tag
         id: git-tag
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
-        if: inputs.publish == 'true'
         with:
           tag-value: ${{ steps.svu.outputs.NEW_TAG }}
           commit-sha: ${{ github.ref_name }}
           git-workdir: ${{ inputs.git-workdir }}
           force-tag: "false"
+
       - name: Update changelog
         id: changelog
-        if: inputs.publish == 'true'
         uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
           lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || steps.svu.outputs.CURRENT_TAG || '' }}
           upper-tag: ${{ steps.svu.outputs.NEW_TAG }}
+
       - name: GH Release
         id: gh-release
-        if: inputs.publish == 'true'
         uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.svu.outputs.NEW_TAG }}
