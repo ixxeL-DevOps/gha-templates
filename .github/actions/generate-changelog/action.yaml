@@ -154,8 +154,8 @@ runs:
                 _gh = gh_instantiate(access_token)
             if author in gh_users:
                 return ""
-            if author == "dependabot[bot]":
-                return "dependabot[bot]"
+            if re.match(r".*\[bot\]$", author):
+                return author
             users = _gh.search_users(author)
             try:
                 if len(list(users)) > 1:
