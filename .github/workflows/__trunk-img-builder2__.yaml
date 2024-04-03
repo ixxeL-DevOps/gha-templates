@@ -227,12 +227,12 @@ jobs:
           logout: false
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.21.0
         with:
           git-workdir: ${{ inputs.git-workdir }}
       - name: Get last tag
         id: get-last-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.21.0
         with:
           git-workdir: ${{ inputs.workingdir }}
           pattern: "${{ inputs.component }}-v[0-9]*.[0-9]*.[0-9]*"
