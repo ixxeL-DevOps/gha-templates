@@ -23,7 +23,7 @@ runs:
       run: |
         set +e
         temp_file=$(mktemp)
-        find ${{ inputs.path }} -type f \( -name "*.yaml" -o -name "*.yml" \) ! -path "${{ inputs.exclude }}" | while read -r file
+        find ${{ inputs.path }} -type f \( -name "*.yaml" -o -name "*.yml" \) ! -path "${{ inputs.exclude }}" ! -path ".github/actions/generate-changelog/*" | while read -r file
         do
           echo -e "${CYAN}[ INFO ] > GH action file analyzed : ${YELLOW}$file${BLANK}"
           run_section=$(yq eval '.runs.steps[].run' "$file")

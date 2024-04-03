@@ -62,6 +62,14 @@ runs:
         echo -e "${CYAN}[ INFO ] > Using classic login to ${PURPLE}${{ inputs.registry-url }}${BLANK}"
         skopeo login --username=${{ inputs.registry-username }} --password=${{ inputs.registry-password }} --tls-verify=false ${{ inputs.registry-url }}
 
+        if [[ $? -eq 0 ]]
+        then
+          echo -e "${GREEN}[ CHECK SUCCESS ] > Login to ${PURPLE}${{ inputs.registry-url }}${GREEN} success${BLANK}"
+        else
+          echo -e "${RED}[ STEP FAILED ] > Login to ${PURPLE}${{ inputs.registry-url }}${RED} failed${BLANK}"
+          exit 1
+        fi
+
         echo -e "${YELLOW}[ EXECUTING ] > Verifying image ${{ inputs.src-img }} exists in repository${BLANK}"
         image=$(echo "${{ inputs.src-img }}" | awk -F ":" '{print $1}')
         tag=$(echo "${{ inputs.src-img }}" | awk -F ":" '{print $2}')

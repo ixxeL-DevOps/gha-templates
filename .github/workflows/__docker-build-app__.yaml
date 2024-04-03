@@ -15,6 +15,10 @@ on:
         required: false
         default: "false"
         type: string
+      retag-binary:
+        required: false
+        type: string
+        default: "crane"
       prerelease:
         required: false
         default: "false"
@@ -214,7 +218,7 @@ jobs:
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
 
       - name: Skopeo retag [ Artefact promotion ]
-        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
+        if: inputs.retag-binary == 'skopeo' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
         uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@main
         id: skopeo-retag
         with:
@@ -223,3 +227,14 @@ jobs:
           registry-password: ${{ secrets.registry-password }}
           src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ steps.pr-origin.outputs.PR_NUMBER }}
           dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
+
+      - name: Crane retag [ Artefact promotion ]
+        if: inputs.retag-binary == 'crane' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
+        uses: ixxeL-DevOps/gha-templates/.github/actions/crane-retag@main
+        id: crane-retag
+        with:
+          registry-url: ${{ inputs.registry-url }}
+          registry-username: ${{ inputs.registry-username }}
+          registry-password: ${{ secrets.registry-password }}
+          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ steps.pr-origin.outputs.PR_NUMBER }}
+          dst-tag: sha-${{ github.sha }}

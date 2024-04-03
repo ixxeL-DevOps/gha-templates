@@ -15,6 +15,10 @@ on:
         required: false
         default: "false"
         type: string
+      retag-binary:
+        required: false
+        type: string
+        default: "crane"
       registry-url:
         required: true
         type: string
@@ -112,12 +116,24 @@ jobs:
       - name: Skopeo retag [ Artefact promotion ]
         uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@main
         id: skopeo-retag
+        if: inputs.retag-binary == 'skopeo'
         with:
           registry-url: ${{ inputs.registry-url }}
           registry-username: ${{ inputs.registry-username }}
           registry-password: ${{ secrets.registry-password }}
           src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
           dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
+
+      - name: Crane retag [ Artefact promotion ]
+        uses: ixxeL-DevOps/gha-templates/.github/actions/crane-retag@main
+        id: crane-retag
+        if: inputs.retag-binary == 'crane'
+        with:
+          registry-url: ${{ inputs.registry-url }}
+          registry-username: ${{ inputs.registry-username }}
+          registry-password: ${{ secrets.registry-password }}
+          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
+          dst-tag: ${{ steps.svu.outputs.NEW_TAG }}
 
       - name: Git tag
         id: git-tag
