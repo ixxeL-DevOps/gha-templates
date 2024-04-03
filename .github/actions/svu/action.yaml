@@ -125,8 +125,13 @@ runs:
         fi
         if [ "${CURRENT_TAG}" == "${NEW_TAG}" ]
         then
-          echo -e "${RED}[ ERROR ] > Current tag ${YELLOW}${CURRENT_TAG}${PURPLE} is same as new tag ${YELLOW}${NEW_TAG}${BLANK}"
+          echo -e "${RED}[ ERROR ] > Current tag ${YELLOW}${CURRENT_TAG}${RED} is same as new tag ${YELLOW}${NEW_TAG}${BLANK}"
           echo -e "${RED}[ ERROR ] > You are trying to release a version already existing. Check that your commit messages trigger a bump (fix, feat, fix! and feat!) or that you are not on the same commit-sha.${BLANK}"
+          exit 1
+        elif [ "${{ inputs.build }}" == "true" ] && [ "${CURRENT_TAG}-build-${{ github.run_number }}" == "${NEW_TAG}" ]
+        then
+          echo -e "${RED}[ ERROR ] > Current tag ${YELLOW}${CURRENT_TAG}${RED} is same release as new tag ${YELLOW}${NEW_TAG}${BLANK}"
+          echo -e "${RED}[ ERROR ] > You are trying to produce new artefact without changes. Check that your commit messages trigger a bump (fix, feat, fix! and feat!) or that you are not on the same commit-sha.${BLANK}"
           exit 1
         fi
         echo -e "${CYAN}[ INFO ] > Current tag is ${PURPLE}${CURRENT_TAG}${BLANK}"
