@@ -1,0 +1,78 @@
+name: Terragrunt
+on:
+  workflow_call:
+    secrets:
+      git-token:
+        required: true
+    inputs:
+      workingdir:
+        required: false
+        default: "."
+        type: string
+      environment:
+        required: false
+        type: string
+        default: "development"
+      tg-version:
+        required: false
+        default: latest
+        type: string
+      tf-version:
+        required: false
+        default: latest
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+jobs:
+  terragrunt:
+    name: Terragrunt
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    # container:
+    #   image: ${{ inputs.build-image }}
+    steps:
+      - name: Clone code
+        uses: actions/checkout@v4
+
+      - name: Check terragrunt HCL
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ inputs.tf-version }}
+          tg_version: ${{ inputs.tg-version }}
+          tg_dir: ${{ inputs.workingdir }}
+          tg_command: 'hclfmt --terragrunt-check --terragrunt-diff'
+
+      - name: Terragrunt Validate
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ inputs.tf-version }}
+          tg_version: ${{ inputs.tg-version }}
+          tg_dir: ${{ inputs.workingdir }}
+          tg_command: 'validate'
+
+      - name: Terragrunt Plan
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ inputs.tf-version }}
+          tg_version: ${{ inputs.tg-version }}
+          tg_dir: ${{ inputs.workingdir }}
+          tg_command: 'plan'
+          tg_comment: 1
+        env:
+          GITHUB_TOKEN: ${{ secrets.git-token }}
+
+      - name: Terragrunt Apply
+        uses: gruntwork-io/terragrunt-action@v2
+        if: github.event_name != 'pull_request'
+        with:
+          tf_version: ${{ inputs.tf-version }}
+          tg_version: ${{ inputs.tg-version }}
+          tg_dir: ${{ inputs.workingdir }}
+          tg_command: 'apply'
+        env:
+          GITHUB_TOKEN: ${{ secrets.git-token }}
+
