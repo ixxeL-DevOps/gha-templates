@@ -25,6 +25,11 @@ on:
         required: false
         default: value.yaml
         type: string
+      helm-strict:
+        description: use strict mode
+        required: false
+        default: true
+        type: boolean
       checkov-gate:
         required: false
         default: 85
@@ -58,6 +63,7 @@ jobs:
       auto-update-chart: ${{ inputs.auto-update-chart }}
       release: false
       vault-enabled: false
+      helm-strict: ${{ inputs.helm-strict }}
     secrets:
       git-token: ${{ secrets.GHA_TOKEN }}
   helm-release:
@@ -74,6 +80,7 @@ jobs:
       auto-update-chart: ${{ inputs.auto-update-chart }}
       auto-tag-repo: ${{ inputs.auto-tag-repo}}
       chart-increment: ${{ inputs.chart-increment }}
+      helm-strict: ${{ inputs.helm-strict }}
       release: true
     secrets:
       git-token: ${{ secrets.GHA_TOKEN }}

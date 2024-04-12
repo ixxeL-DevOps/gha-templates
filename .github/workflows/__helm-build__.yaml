@@ -256,6 +256,7 @@ jobs:
         id: helm-lint
         uses: ixxeL-DevOps/gha-templates/.github/actions/helm-lint@main
         with:
+          strict: ${{ inputs.helm-strict }}
           workingdir: ${{ inputs.workingdir }}
       - name: Detect bump
         id: detect-bump
