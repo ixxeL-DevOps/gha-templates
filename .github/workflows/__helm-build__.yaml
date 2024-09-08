@@ -426,4 +426,4 @@ jobs:
                  /repos/ixxeL-DevOps/GitOps-apps/dispatches \
                  -f "event_type=renovate"
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.git-admin-token }}
