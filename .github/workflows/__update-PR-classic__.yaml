@@ -43,18 +43,18 @@ jobs:
           token: ${{ secrets.git-token }}
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.22.1
         with:
           git-workdir: ${{ inputs.workingdir }}
       - name: Get last tag
         id: get-last-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.22.1
         with:
           pattern: "*-[0-9]*.[0-9]*.[0-9]*"
           git-workdir: ${{ inputs.workingdir }}
       - name: Update PR title
         id: update-pr-title
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-update-pr-title@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-update-pr-title@v0.22.1
         with:
           pattern: ${{ inputs.pr-pattern }}
         env:
