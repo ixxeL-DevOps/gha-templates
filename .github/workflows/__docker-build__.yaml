@@ -201,4 +201,3 @@ jobs:
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
-

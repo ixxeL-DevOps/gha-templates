@@ -19,4 +19,4 @@ jobs:
       git-workdir: .github
       prerelease: "${{ inputs.release-type == 'RC' }}"
     secrets:
-      git-token: ${{ secrets.PAT }}
+      git-token: ${{ secrets.SUPER_ADMIN_TOKEN }}

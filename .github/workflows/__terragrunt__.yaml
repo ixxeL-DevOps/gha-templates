@@ -44,7 +44,7 @@ jobs:
           tf_version: ${{ inputs.tf-version }}
           tg_version: ${{ inputs.tg-version }}
           tg_dir: ${{ inputs.workingdir }}
-          tg_command: 'hclfmt --terragrunt-check --terragrunt-diff'
+          tg_command: "hclfmt --terragrunt-check --terragrunt-diff"
 
       - name: Terragrunt Validate
         uses: gruntwork-io/terragrunt-action@v2
@@ -52,7 +52,7 @@ jobs:
           tf_version: ${{ inputs.tf-version }}
           tg_version: ${{ inputs.tg-version }}
           tg_dir: ${{ inputs.workingdir }}
-          tg_command: 'validate'
+          tg_command: "validate"
 
       - name: Terragrunt Plan
         uses: gruntwork-io/terragrunt-action@v2
@@ -60,7 +60,7 @@ jobs:
           tf_version: ${{ inputs.tf-version }}
           tg_version: ${{ inputs.tg-version }}
           tg_dir: ${{ inputs.workingdir }}
-          tg_command: 'plan'
+          tg_command: "plan"
           tg_comment: 1
         env:
           GITHUB_TOKEN: ${{ secrets.git-token }}
@@ -72,7 +72,6 @@ jobs:
           tf_version: ${{ inputs.tf-version }}
           tg_version: ${{ inputs.tg-version }}
           tg_dir: ${{ inputs.workingdir }}
-          tg_command: 'apply'
+          tg_command: "apply"
         env:
           GITHUB_TOKEN: ${{ secrets.git-token }}
-

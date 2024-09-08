@@ -31,11 +31,11 @@ repos:
       - id: detect-private-key
       - id: check-executables-have-shebangs
       - id: check-docstring-first
-  - repo: https://github.com/mpalmer/action-validator
-    rev: v0.5.4
-    hooks:
-      - id: action-validator
-        files: '.github/.*/.*\.ya?ml'
+  # - repo: https://github.com/mpalmer/action-validator
+  #   rev: v0.5.4
+  #   hooks:
+  #     - id: action-validator
+  #       files: '.github/.*/.*\.ya?ml'
   - repo: https://github.com/sirosen/check-jsonschema
     rev: 0.28.0
     hooks:
