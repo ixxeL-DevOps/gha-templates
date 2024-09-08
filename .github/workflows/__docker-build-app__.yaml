@@ -120,7 +120,6 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
-
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
         id: hadolint
@@ -129,7 +128,6 @@ jobs:
           dockerfile: ${{ inputs.workingdir }}/Dockerfile
           verbose: true
           failure-threshold: info
-
       - name: Update PR
         uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
@@ -149,16 +147,14 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
-
       - name: Check PR origin
         if: github.event_name != 'pull_request'
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-pr-origin@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-pr-origin@v0.22.0
         id: pr-origin
         with:
           commit: ${{ github.sha }}
         env:
           GH_TOKEN: ${{ github.token }}
-
       - name: Set up QEMU
         if: github.event_name == 'pull_request' || steps.pr-origin.outputs.PR_NUMBER == ''
         uses: docker/setup-qemu-action@v3
@@ -173,7 +169,6 @@ jobs:
           username: ${{ inputs.registry-username }}
           password: ${{ secrets.registry-password }}
           logout: false
-
       - name: Build Docker img [PR]
         uses: docker/build-push-action@v5
         if: github.event_name == 'pull_request'
@@ -190,7 +185,6 @@ jobs:
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ github.event.pull_request.number }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.event.pull_request.head.sha }}
-
       - name: Build Docker img [Trunk]
         uses: docker/build-push-action@v5
         if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER == ''
@@ -206,10 +200,9 @@ jobs:
             ${{ inputs.build-arg }}
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
-
       - name: Skopeo retag [ Artefact promotion ]
         if: inputs.retag-binary == 'skopeo' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
-        uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@v0.22.0
         id: skopeo-retag
         with:
           registry-url: ${{ inputs.registry-url }}
@@ -217,10 +210,9 @@ jobs:
           registry-password: ${{ secrets.registry-password }}
           src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ steps.pr-origin.outputs.PR_NUMBER }}
           dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
-
       - name: Crane retag [ Artefact promotion ]
         if: inputs.retag-binary == 'crane' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
-        uses: ixxeL-DevOps/gha-templates/.github/actions/crane-retag@main
+        uses: ixxeL-DevOps/gha-templates/.github/actions/crane-retag@v0.22.0
         id: crane-retag
         with:
           registry-url: ${{ inputs.registry-url }}
