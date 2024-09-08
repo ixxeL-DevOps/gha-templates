@@ -116,6 +116,7 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
+
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
         id: hadolint
@@ -124,6 +125,7 @@ jobs:
           dockerfile: ${{ inputs.workingdir }}/Dockerfile
           verbose: true
           failure-threshold: info
+
       - name: Update PR
         uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
@@ -143,6 +145,7 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -154,6 +157,7 @@ jobs:
           username: ${{ inputs.registry-username }}
           password: ${{ secrets.registry-password }}
           logout: false
+
       - name: Build Docker img [PR]
         uses: docker/build-push-action@v5
         if: github.event_name == 'pull_request'
@@ -170,15 +174,17 @@ jobs:
             ${{ inputs.build-arg }}
           tags: |
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ github.event.pull_request.number }}
+
       - name: Calculate current and next tag
         id: svu
-        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
         if: github.event_name != 'pull_request'
         with:
           workingdir: ${{ inputs.workingdir }}
           component: ${{ inputs.component }}
           prerelease: ${{ inputs.prerelease }}
           build: "true"
+
       - name: Build Docker img [Trunk]
         uses: docker/build-push-action@v5
         if: github.event_name != 'pull_request'

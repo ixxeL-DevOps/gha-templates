@@ -178,23 +178,23 @@ jobs:
             ${{ steps.calculate-vault-path.outputs.VAULT_PATH }} kubeconfig-b64 | KUBECFG ;
       - name: Set kubeconfig
         id: set-kubeconfig
-        uses: ixxeL-DevOps/gha-templates/.github/actions/set-kubeconfig@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/set-kubeconfig@main
         with:
           kubeconfig-b64: ${{ steps.get-kubeconfig.outputs.KUBECFG }}
       - name: Getting HelmRelease info
         id: get-hr-info
-        uses: ixxeL-DevOps/gha-templates/.github/actions/get-flux-hr-info@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/get-flux-hr-info@main
         with:
           hr-file-path: ${{ steps.find-hr.outputs.HR }}
       - name: Getting Helm deployment info
         id: get-helm-info
-        uses: ixxeL-DevOps/gha-templates/.github/actions/get-helm-info@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/get-helm-info@main
         with:
           helm-release: ${{ steps.get-hr-info.outputs.RELEASE }}
           namespace: ${{ steps.set-kubeconfig.outputs.NAMESPACE }}
       - name: Helm template current Release
         id: helm-tpl-current
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@main
         with:
           add-repo: true
           stdout-mode: true
@@ -216,7 +216,7 @@ jobs:
           fi
       - name: Helm template update Release
         id: helm-tpl-update-static
-        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/helm-template@main
         with:
           add-repo: true
           stdout-mode: true
@@ -227,7 +227,7 @@ jobs:
           values-file: ./updated-values.yaml
       - name: Generate dyff on values
         id: dyff-values
-        uses: ixxeL-DevOps/gha-templates/.github/actions/dyff@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/dyff@main
         with:
           first-file: current-values.yaml
           second-file: updated-values.yaml
@@ -254,7 +254,7 @@ jobs:
             })
       - name: Generate dyff on release
         id: dyff-helm
-        uses: ixxeL-DevOps/gha-templates/.github/actions/dyff@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/dyff@main
         with:
           first-file: helm-tpl-result/current-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.get-helm-info.outputs.CHART_VERSION }}.yaml
           second-file: helm-tpl-result/update-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.set-target-version.outputs.TARGET_VERSION }}.yaml
@@ -281,12 +281,12 @@ jobs:
             })
       - name: Kubeconform helm template
         id: kubeconform
-        uses: ixxeL-DevOps/gha-templates/.github/actions/kubeconform@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/kubeconform@main
         with:
           target: helm-tpl-result/update-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.set-target-version.outputs.TARGET_VERSION }}.yaml
       - name: Kyverno check
         id: kyverno-check
-        uses: ixxeL-DevOps/gha-templates/.github/actions/kyverno-apply@v0.22.1
+        uses: ixxeL-DevOps/gha-templates/.github/actions/kyverno-apply@main
         with:
           policies-dir: ${{ inputs.kyverno-policies-dir }}
           manifest-dir: helm-tpl-result/update-${{ steps.get-hr-info.outputs.RELEASE }}-${{ steps.get-helm-info.outputs.CHART_NAME }}-${{ steps.set-target-version.outputs.TARGET_VERSION }}.yaml
