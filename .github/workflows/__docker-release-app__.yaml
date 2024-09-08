@@ -79,37 +79,42 @@ jobs:
         with:
           fetch-depth: "0"
           token: ${{ secrets.git-token }}
+
       - name: Git config
         id: git-config
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@v0.22.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
         with:
           git-workdir: ${{ inputs.git-workdir }}
+
       - name: Calculate current and next tag
         id: svu
-        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@v0.22.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/svu@main
         with:
           workingdir: ${{ inputs.workingdir }}
           prerelease: ${{ inputs.prerelease }}
+
       - name: Get last tag (Release Candidate)
         id: get-last-tag-rc
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.22.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         if: inputs.prerelease == 'true'
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}-rc\\.[0-9]+"
           starting-tag: ""
+
       - name: Get last tag (General Availability)
         id: get-last-tag-ga
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@v0.22.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-get-last-tag@main
         if: inputs.prerelease == 'false'
         with:
           git-workdir: ${{ inputs.git-workdir }}
           branch: ${{ github.ref_name }}
           pattern: "v?[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}$"
           starting-tag: ""
+
       - name: Skopeo retag [ Artefact promotion ]
-        uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@v0.22.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@main
         id: skopeo-retag
         if: inputs.retag-binary == 'skopeo'
         with:
@@ -118,8 +123,9 @@ jobs:
           registry-password: ${{ secrets.registry-password }}
           src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
           dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
+
       - name: Crane retag [ Artefact promotion ]
-        uses: ixxeL-DevOps/gha-templates/.github/actions/crane-retag@v0.22.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/crane-retag@main
         id: crane-retag
         if: inputs.retag-binary == 'crane'
         with:
@@ -128,24 +134,27 @@ jobs:
           registry-password: ${{ secrets.registry-password }}
           src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
           dst-tag: ${{ steps.svu.outputs.NEW_TAG }}
+
       - name: Git tag
         id: git-tag
-        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@v0.22.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         with:
           tag-value: ${{ steps.svu.outputs.NEW_TAG }}
           commit-sha: ${{ github.ref_name }}
           git-workdir: ${{ inputs.git-workdir }}
           force-tag: "false"
+
       - name: Update changelog
         id: changelog
-        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@v0.22.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/generate-changelog@main
         with:
           workingdir: ${{ inputs.workingdir }}
           lower-tag: ${{ steps.get-last-tag-rc.outputs.LAST_TAG || steps.get-last-tag-ga.outputs.LAST_TAG || steps.svu.outputs.CURRENT_TAG || '' }}
           upper-tag: ${{ steps.svu.outputs.NEW_TAG }}
+
       - name: GH Release
         id: gh-release
-        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@v0.22.0
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-release@main
         with:
           tag: ${{ steps.svu.outputs.NEW_TAG }}
           target-branch: ${{ github.ref_name }}
