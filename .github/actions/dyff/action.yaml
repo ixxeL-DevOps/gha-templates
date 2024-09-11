@@ -1,14 +1,14 @@
 ---
 name: Dyff
-description: Using dyff to diff files
+description: Using dyff to diff files/directories
 author: ixxeL
 inputs:
-  first-file:
+  source:
     required: true
-    description: first file to compare
-  second-file:
+    description: first file/dir to compare
+  target:
     required: true
-    description: second file to compare
+    description: second file/dir to compare
   exclude-regexp:
     required: false
     default: "spec.template.metadata.annotations.checksum"
@@ -50,18 +50,57 @@ runs:
       run: |
         set +e
         echo -e "${BLUE}[ STEP - DYFF ] > Diffing files with Dyff${BLANK}"
-        RESULT=$(dyff between --color on \
-                     --output human \
-                     --truecolor on \
-                     --exclude-regexp ${{ inputs.exclude-regexp }} \
-                     ${{ inputs.first-file }} ${{ inputs.second-file }})
-        echo "${RESULT}"
-        CLEANED_RESULT=$(echo "${RESULT}" | sed -r "s/\x1B\[[0-9;]+[mGKFHmsu]//g")
+        echo -e "${CYAN}[ INFO ] > Using source dir/file ${PURPLE}${{ inputs.source }}${CYAN} and target dir/file ${PURPLE}${{ inputs.target }}${BLANK}"
+
+        if [ -f "${{ inputs.source }}" ] && [ -f "${{ inputs.target }}" ]
+        then
+          echo -e "${CYAN}[ INFO ] > Files one to one${BLANK}"
+          RESULT=$(dyff between --color on \
+                      --output human \
+                      --truecolor on \
+                       --ignore-order-changes \
+                      --exclude-regexp ${{ inputs.exclude-regexp }} \
+                      ${{ inputs.source}} ${{ inputs.target}})
+          echo "${RESULT}"
+          RESULTS=$(echo "${RESULT}" | sed -r "s/\x1B\[[0-9;]+[mGKFHmsu]//g")
+
+        elif [[ "${{ inputs.source }}" == *"*"* ]] && [[ "${{ inputs.target }}" == *"*"* ]]
+        then
+          echo -e "${CYAN}[ INFO ] > Pattern${BLANK}"
+          SOURCE_SUFFIX=$(echo "${{ inputs.source }}" | sed 's/.*\*//')
+          TARGET_PREFIX=$(echo "${{ inputs.target }}" | sed 's/\*.*//')
+          TARGET_SUFFIX=$(echo "${{ inputs.target }}" | sed 's/.*\*//')
+
+          for source_file in ${{ inputs.source }}
+          do
+            echo -e "${CYAN}[ INFO ] > found file ${PURPLE}$source_file${BLANK}"
+            base_name=$(basename "$source_file" "$SOURCE_SUFFIX")
+            echo -e "${CYAN}[ INFO ] > Base name extracted ${PURPLE}$base_name${BLANK}"
+            target_file="${TARGET_PREFIX}${base_name}${TARGET_SUFFIX}"
+            echo -e "${CYAN}[ INFO ] > Target file ${PURPLE}$target_file${BLANK}"
+
+            if [ -f "$target_file" ]; then
+              RESULT=$(dyff between --color on \
+                                    --output human \
+                                    --truecolor on \
+                                    --ignore-order-changes \
+                                    "$source_file" "$target_file")
+              echo "${RESULT}"
+
+              CLEANED_RESULT=$(echo "${RESULT}" | sed -r "s/\x1B\[[0-9;]+[mGKFHmsu]//g")
+              RESULTS+="${CLEANED_RESULT}"
+              RESULTS+="\n\n"
+            else
+              echo -e "${RED}[ ERROR ] > Target file $target_file not found${BLANK}"
+            fi
+          done
+        fi
         {
           echo 'DYFF_RESULT<<EOF'
-          echo "${CLEANED_RESULT}"
+          echo -e "${RESULTS}"
           echo EOF
         } >> $GITHUB_OUTPUT
+
         exit 0
       shell: bash
       env:
