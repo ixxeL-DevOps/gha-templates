@@ -87,7 +87,7 @@ runs:
                                     "$source_file" "$target_file")
               echo "${RESULT}"
 
-              CLEANED_RESULT=$(echo "${RESULT}" | sed -r "s/\x1B\[[0-9;]+[mGKFHmsu]//g")
+              CLEANED_RESULT=$(echo "${RESULT}" | sed -r "s/\x1B\[[0-9;]+[mGKFHmsu]//g" | head -c 64000)
               RESULTS+="${CLEANED_RESULT}"
               RESULTS+="\n\n"
             else
