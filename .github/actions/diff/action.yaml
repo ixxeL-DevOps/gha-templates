@@ -30,7 +30,7 @@ runs:
           RESULT=$(diff ${{ inputs.source }} ${{ inputs.target }} --color=always --unified=10)
           echo "${RESULT}"
           diff ${{ inputs.source }} ${{ inputs.target }} --color=never --unified=10 >> diff.md || true
-
+          echo " " >> diff.md 
         elif [[ "${{ inputs.source }}" == *"*"* ]] && [[ "${{ inputs.target }}" == *"*"* ]]
         then
           echo -e "${CYAN}[ INFO ] > Pattern${BLANK}"
@@ -50,6 +50,7 @@ runs:
               RESULT=$(diff ${source_file} ${target_file} --color=always --unified=10)
               echo "${RESULT}"
               diff ${source_file} ${target_file} --color=never --unified=10 >> diff.md || true
+              echo " " >> diff.md 
             else
               echo -e "${RED}[ ERROR ] > Target file $target_file not found${BLANK}"
               exit 1
