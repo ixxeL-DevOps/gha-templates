@@ -62,6 +62,7 @@ runs:
                       -ignore-missing-schemas \
                       -schema-location default \
                       -schema-location ${{ inputs.schema-location }} \
+                      -output pretty \
                       ${{ inputs.target }}
         elif [[ -f ${{ inputs.target }} ]]
         then
@@ -71,6 +72,7 @@ runs:
                       -ignore-missing-schemas \
                       -schema-location default \
                       -schema-location ${{ inputs.schema-location }} \
+                      -output pretty \
                       ${{ inputs.target }}
         else
           echo -e "${PURPLE}[ ERROR ] > Target ${{ inputs.target }} is neither a file or a directory${BLANK}"
