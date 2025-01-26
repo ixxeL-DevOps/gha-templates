@@ -52,6 +52,7 @@ runs:
               diff ${source_file} ${target_file} --color=never --unified=10 >> diff.md || true
             else
               echo -e "${RED}[ ERROR ] > Target file $target_file not found${BLANK}"
+              exit 1
             fi
           done
         fi

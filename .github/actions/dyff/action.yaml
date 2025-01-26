@@ -92,6 +92,7 @@ runs:
               RESULTS+="\n\n"
             else
               echo -e "${RED}[ ERROR ] > Target file $target_file not found${BLANK}"
+              exit 1
             fi
           done
         fi
