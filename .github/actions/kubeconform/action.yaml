@@ -64,6 +64,15 @@ runs:
                       -schema-location ${{ inputs.schema-location }} \
                       -output pretty \
                       ${{ inputs.target }}
+
+          kubeconform -verbose \
+                      -summary \
+                      -ignore-missing-schemas \
+                      -schema-location default \
+                      -schema-location ${{ inputs.schema-location }} \
+                      -output pretty \
+                      ${{ inputs.target }} > kubeconform.md 
+
         elif [[ -f ${{ inputs.target }} ]]
         then
           echo -e "${YELLOW}[ EXECUTING ] > Kubeconform on file ${{ inputs.target }}${BLANK}"
@@ -74,6 +83,15 @@ runs:
                       -schema-location ${{ inputs.schema-location }} \
                       -output pretty \
                       ${{ inputs.target }}
+
+          kubeconform -verbose \
+                      -summary \
+                      -ignore-missing-schemas \
+                      -schema-location default \
+                      -schema-location ${{ inputs.schema-location }} \
+                      -output pretty \
+                      ${{ inputs.target }} > kubeconform.md
+
         else
           echo -e "${PURPLE}[ ERROR ] > Target ${{ inputs.target }} is neither a file or a directory${BLANK}"
         fi
