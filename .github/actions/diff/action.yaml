@@ -30,6 +30,14 @@ runs:
           RESULT=$(diff ${{ inputs.source }} ${{ inputs.target }} --color=always --unified=10)
           echo "${RESULT}"
           diff ${{ inputs.source }} ${{ inputs.target }} --color=never --unified=10 >> diff.md || true
+          MAX_SIZE=65000
+          CURRENT_SIZE=$(wc -c < diff.md)
+          if [ "$CURRENT_SIZE" -gt "$MAX_SIZE" ]; then
+            echo -e "${RED}[ WARNING ] > Diff output exceeds ${MAX_SIZE} characters, truncating...${BLANK}"
+            head -c 64500 diff.md > diff.tmp
+            echo -e "\n[Truncated: Diff output was too large]" >> diff.tmp
+            mv diff.tmp diff.md
+          fi
           echo " " >> diff.md
         elif [[ "${{ inputs.source }}" == *"*"* ]] && [[ "${{ inputs.target }}" == *"*"* ]]
         then
@@ -50,6 +58,14 @@ runs:
               RESULT=$(diff ${source_file} ${target_file} --color=always --unified=10)
               echo "${RESULT}"
               diff ${source_file} ${target_file} --color=never --unified=10 >> diff.md || true
+              MAX_SIZE=65000
+              CURRENT_SIZE=$(wc -c < diff.md)
+              if [ "$CURRENT_SIZE" -gt "$MAX_SIZE" ]; then
+                echo -e "${RED}[ WARNING ] > Diff output exceeds ${MAX_SIZE} characters, truncating...${BLANK}"
+                head -c 64500 diff.md > diff.tmp
+                echo -e "\n[Truncated: Diff output was too large]" >> diff.tmp
+                mv diff.tmp diff.md
+              fi
               echo " " >> diff.md
             else
               echo -e "${RED}[ ERROR ] > Target file $target_file not found${BLANK}"
