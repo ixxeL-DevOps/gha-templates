@@ -170,7 +170,7 @@ on:
         type: string
       helm-repo-url:
         required: false
-        default: https://chartmuseum.k8s-app.fredcorp.com
+        default: https://chartmuseum.k8s-infra.fredcorp.com
         type: string
       helm-repo-username:
         required: false
