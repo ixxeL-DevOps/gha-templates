@@ -21,6 +21,10 @@ inputs:
     default: ${{ github.token }}
     required: false
     description: git clone depth
+outputs:
+  TOKEN:
+    description: template file path
+    value: ${{ steps.get-token.outputs.token || inputs.git-token }}
     
 runs:
   using: composite

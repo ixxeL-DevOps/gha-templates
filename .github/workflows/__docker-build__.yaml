@@ -115,12 +115,14 @@ jobs:
     #   options: --privileged
     steps:
       - name: Clone repo
+        id: clone
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-clone@main
         with:
           mode: 'app'
           app-id: ${{ secrets.gh-app-id }}
           private-key: ${{ secrets.gh-app-private-key }}
-          
+          fetch-depth: 0
+
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
         id: hadolint
@@ -134,7 +136,7 @@ jobs:
         uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.clone.outputs.TOKEN }}
           script: |
             const output = `
             #### Hadolint: \`${{ steps.hadolint.outcome }}\`
