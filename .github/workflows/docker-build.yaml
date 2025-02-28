@@ -3,11 +3,15 @@ name: Docker image building
 on:
   workflow_call:
     secrets:
-      git-token:
+      PAT:
         required: false
       GH_API_TOKEN:
         required: false
       DOCKER_IO_PWD:
+        required: false
+      GHAPP_APP_ID:
+        required: false
+      GHAPP_PRIVATE_KEY:
         required: false
     inputs:
       workingdir:
@@ -49,6 +53,8 @@ jobs:
       registry-url: ${{ inputs.registry-url }}
       registry-username: ${{ inputs.registry-username }}
     secrets:
-      git-token: ${{ secrets.git-token }}
+      git-token: ${{ secrets.PAT }}
       docker-io-pwd: ${{ secrets.DOCKER_IO_PWD }}
       registry-password: ${{ secrets.DOCKER_IO_PWD }}
+      gh-app-id: ${{ secrets.GHAPP_APP_ID }}
+      gh-app-private-key: ${{ secrets.GHAPP_PRIVATE_KEY }}

@@ -9,6 +9,10 @@ on:
         required: false
       git-token:
         required: false
+      gh-app-id:
+        required: false
+      gh-app-private-key:
+        required: false
     inputs:
       # General
       prerelease:
@@ -110,13 +114,13 @@ jobs:
     #   image: ${{ inputs.build-image }}
     #   options: --privileged
     steps:
-      - name: Clone code
-        id: clone
-        uses: actions/checkout@v4
+      - name: Clone repo
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-clone@main
         with:
-          fetch-depth: "0"
-          token: ${{ secrets.git-token }}
-
+          mode: 'app'
+          app-id: ${{ secrets.gh-app-id }}
+          private-key: ${{ secrets.gh-app-private-key }}
+          
       - name: Hadolint Dockerfile Scan
         uses: hadolint/hadolint-action@v3.1.0
         id: hadolint

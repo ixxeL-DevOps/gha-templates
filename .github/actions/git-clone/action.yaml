@@ -1,0 +1,47 @@
+---
+name: Git clone
+description: cloning git repo
+author: ixxeL
+inputs:
+  mode:
+    default: pat
+    required: false
+    description: Mode either 'pat' or 'app'
+  app-id:
+    required: false
+    description: GitHub APP ID
+  private-key:
+    required: false
+    description: GitHub APP Private key
+  fetch-depth:
+    default: '1'
+    required: false
+    description: git clone depth
+  git-token:
+    default: ${{ github.token }}
+    required: false
+    description: git clone depth
+    
+runs:
+  using: composite
+  steps:
+    - name: GH App get Token
+      id: get-token
+      if: inputs.mode == 'app'
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+    - name: Clone code (GH App)
+      uses: actions/checkout@v4
+      if: inputs.mode == 'app'
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+        token: ${{ steps.get-token.outputs.token }}
+    - name: Clone code (PAT)
+      id: clone
+      if: inputs.mode == 'pat'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+        token: ${{ inputs.git-token }}
