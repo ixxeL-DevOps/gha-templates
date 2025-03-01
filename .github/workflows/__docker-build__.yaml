@@ -118,7 +118,7 @@ jobs:
         id: clone
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-clone@main
         with:
-          mode: 'app'
+          mode: "app"
           app-id: ${{ secrets.gh-app-id }}
           private-key: ${{ secrets.gh-app-private-key }}
           fetch-depth: 0
@@ -190,6 +190,7 @@ jobs:
           component: ${{ inputs.component }}
           prerelease: ${{ inputs.prerelease }}
           build: "true"
+          always-bump: "true"
 
       - name: Build Docker img [Trunk]
         uses: docker/build-push-action@v5

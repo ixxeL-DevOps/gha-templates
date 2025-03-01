@@ -14,7 +14,7 @@ inputs:
     required: false
     description: GitHub APP Private key
   fetch-depth:
-    default: '1'
+    default: "1"
     required: false
     description: git clone depth
   git-token:
@@ -25,7 +25,7 @@ outputs:
   TOKEN:
     description: template file path
     value: ${{ steps.get-token.outputs.token || inputs.git-token }}
-    
+
 runs:
   using: composite
   steps:

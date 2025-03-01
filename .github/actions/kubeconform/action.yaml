@@ -71,7 +71,7 @@ runs:
                       -schema-location default \
                       -schema-location ${{ inputs.schema-location }} \
                       -output pretty \
-                      ${{ inputs.target }} > kubeconform.md 
+                      ${{ inputs.target }} > kubeconform.md
 
         elif [[ -f ${{ inputs.target }} ]]
         then

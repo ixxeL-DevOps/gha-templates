@@ -11,6 +11,10 @@ ci:
 default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [pre-commit, manual]
 fail_fast: false
+exclude: |
+  (?x)^(
+      node_modules/.*
+  )$
 repos:
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.0.0
@@ -32,7 +36,7 @@ repos:
       - id: check-executables-have-shebangs
       - id: check-docstring-first
   # - repo: https://github.com/mpalmer/action-validator
-  #   rev: v0.5.4
+  #   rev: v0.6.0
   #   hooks:
   #     - id: action-validator
   #       files: '.github/.*/.*\.ya?ml'

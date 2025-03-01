@@ -31,6 +31,10 @@ inputs:
     required: false
     default: "rc"
     description: prerelease pattern to use
+  always-bump:
+    required: false
+    default: "true"
+    description: always bump version
 outputs:
   CURRENT_TAG:
     description: current git tag
@@ -75,6 +79,10 @@ runs:
         then
           COMPONENT="${{ inputs.component }}-"
         fi
+        if [ "${{ inputs.always-bump }}" == "true" ]
+        then
+          OPTION="--always"
+        fi
         if [ "${{ inputs.build }}" == "true" ]
         then
           echo -e "${CYAN}[ INFO ] > Build mode activated${BLANK}"
@@ -93,7 +101,7 @@ runs:
           CURRENT_TAG=""
           if [ "${{ inputs.build }}" == "true" ]
           then
-            NEW_TAG="$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }})-build-${{ github.run_number }}")
+            NEW_TAG="$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }})-build-${{ github.run_number }}"
           elif [ "${{ inputs.prerelease }}" == "true" ]
           then
             CURRENT_TAG=$(svu current --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*")
@@ -116,10 +124,10 @@ runs:
         else
           if [ "${{ inputs.build }}" == "true" ]
           then
-            NEW_TAG="$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }})-build-${{ github.run_number }}"
+            NEW_TAG="$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }} "${OPTION}")-build-${{ github.run_number }}"
           elif [ "${{ inputs.prerelease }}" == "true" ]
           then
-            NEW_TAG=$(svu prerelease --prerelease=${{ inputs.prerelease-pattern }} --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*"
+            NEW_TAG=$(svu prerelease --prerelease=${{ inputs.prerelease-pattern }} --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*")
           else
             NEW_TAG=$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }})
           fi
