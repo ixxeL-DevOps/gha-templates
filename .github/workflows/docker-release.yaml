@@ -3,9 +3,13 @@ name: Docker Release image
 on:
   workflow_call:
     secrets:
-      git-token:
+      PAT:
         required: false
-      registry-password:
+      DOCKER_IO_PWD:
+        required: false
+      GHAPP_APP_ID:
+        required: false
+      GHAPP_PRIVATE_KEY:
         required: false
     inputs:
       workingdir:
@@ -53,5 +57,7 @@ jobs:
       registry-username: ${{ inputs.registry-username }}
       prerelease: ${{ inputs.prerelease }}
     secrets:
-      git-token: ${{ secrets.git-token }}
-      registry-password: ${{ secrets.registry-password }}
+      git-token: ${{ secrets.PAT }}
+      registry-password: ${{ secrets.DOCKER_IO_PWD }}
+      gh-app-id: ${{ secrets.GHAPP_APP_ID }}
+      gh-app-private-key: ${{ secrets.GHAPP_PRIVATE_KEY }}
