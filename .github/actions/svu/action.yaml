@@ -87,22 +87,22 @@ runs:
         fi
 
         echo -e "${YELLOW}[ EXECUTING ] > Calculating current and next tag${BLANK}"
-        CURRENT_TAG=$(svu current --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*${PRERELEASE_PATTERN}"
+        CURRENT_TAG=$(svu current --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*${PRERELEASE_PATTERN}")
         if [ $? -ne 0 ]
         then
           CURRENT_TAG=""
           if [ "${{ inputs.build }}" == "true" ]
           then
-            NEW_TAG="$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }})-build-${{ github.run_number }}"
+            NEW_TAG="$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }})-build-${{ github.run_number }}")
           elif [ "${{ inputs.prerelease }}" == "true" ]
           then
-            CURRENT_TAG=$(svu current --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*"
+            CURRENT_TAG=$(svu current --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*")
             if [ $? -ne 0 ]
             then
               CURRENT_TAG=""
               NEW_TAG="${COMPONENT}v0.1.0-${{ inputs.prerelease-pattern }}.0"
             else
-              NEW_TAG=$(svu prerelease --prerelease=${{ inputs.prerelease-pattern }} --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*"
+              NEW_TAG=$(svu prerelease --prerelease=${{ inputs.prerelease-pattern }} --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*")
               if [ "$(echo "$NEW_TAG" | awk -F "$PRERELEASE_PATTERN" '{print $1}')" == "$CURRENT_TAG" ]
               then
                 echo -e "${RED}[ ERROR ] > Cancel to avoid irrelevant RC ${YELLOW}($NEW_TAG)${PURPLE} and GA ${YELLOW}($CURRENT_TAG)${PURPLE} version${BLANK}"
