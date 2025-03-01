@@ -127,9 +127,9 @@ runs:
             NEW_TAG="$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }} "${OPTION}")-build-${{ github.run_number }}"
           elif [ "${{ inputs.prerelease }}" == "true" ]
           then
-            NEW_TAG=$(svu prerelease --prerelease=${{ inputs.prerelease-pattern }} --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*")
+            NEW_TAG=$(svu prerelease --prerelease=${{ inputs.prerelease-pattern }} --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" "${OPTION}")
           else
-            NEW_TAG=$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }})
+            NEW_TAG=$(svu next --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*" --log.directory=${{ inputs.workingdir }} "${OPTION}")
           fi
         fi
         if [ "${CURRENT_TAG}" == "${NEW_TAG}" ]
