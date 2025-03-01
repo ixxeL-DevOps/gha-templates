@@ -101,6 +101,11 @@ on:
         required: false
         default: false
         type: boolean
+      always-bump:
+        required: false
+        default: "true"
+        type: string
+
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -190,7 +195,7 @@ jobs:
           component: ${{ inputs.component }}
           prerelease: ${{ inputs.prerelease }}
           build: "true"
-          always-bump: "true"
+          always-bump: ${{ inputs.always-bump }}
 
       - name: Build Docker img [Trunk]
         uses: docker/build-push-action@v5

@@ -13,7 +13,11 @@ inputs:
     description: tls verification
   git-email:
     required: false
-    default: username@users.noreply.github.com
+    default: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+    description: default git email
+  git-username:
+    required: false
+    default: ${{ github.actor }}
     description: default git email
 
 runs:
@@ -25,10 +29,10 @@ runs:
         echo -e "${CYAN}[ INFO ] > Git version.${BLANK}"
         git version
 
-        echo -e "${YELLOW}[ EXECUTING ] > setting up git config to mail ${{ inputs.git-email }} and username ${GITHUB_ACTOR}.${BLANK}"
+        echo -e "${YELLOW}[ EXECUTING ] > setting up git config to mail ${{ inputs.git-email }} and username ${{ inputs.git-username }}.${BLANK}"
         git config --global --add safe.directory "$(realpath "${{ inputs.git-workdir }}")"
         git config --global user.email "${{ inputs.git-email }}"
-        git config --global user.name "${GITHUB_ACTOR}"
+        git config --global user.name "${{ inputs.git-username }}"
         git config --global http.sslVerify ${{ inputs.tls-verify }}
         git config --list
       shell: bash

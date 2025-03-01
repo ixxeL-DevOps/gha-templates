@@ -24,13 +24,19 @@ inputs:
 outputs:
   TOKEN:
     description: template file path
-    value: ${{ steps.get-token.outputs.token || inputs.git-token }}
+    value: ${{ steps.get-app-token.outputs.token || inputs.git-token }}
+  USER_EMAIL:
+    description: Git user email
+    value: ${{ steps.get-user-info.outputs.USER_EMAIL }}
+  USER_NAME:
+    description: Git user name
+    value: ${{ steps.get-user-info.outputs.USER_NAME || github.actor }}
 
 runs:
   using: composite
   steps:
     - name: GH App get Token
-      id: get-token
+      id: get-app-token
       if: inputs.mode == 'app'
       uses: actions/create-github-app-token@v1
       with:
@@ -41,7 +47,17 @@ runs:
       if: inputs.mode == 'app'
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
-        token: ${{ steps.get-token.outputs.token }}
+        token: ${{ steps.get-app-token.outputs.token }}
+    - name: Get GitHub App User info
+      id: get-user-info
+      if: inputs.mode == 'app'
+      run: |
+        USER_ID=$(gh api "/users/${{ steps.get-app-token.outputs.app-slug }}[bot]" --jq .id)
+        echo "USER_EMAIL=${USER_ID}+${{ steps.get-app-token.outputs.app-slug }}[bot]@users.noreply.github.com" >> "$GITHUB_OUTPUT"
+        echo "USER_NAME=${{ steps.get-app-token.outputs.app-slug }}[bot]" >> "$GITHUB_OUTPUT"
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
     - name: Clone code (PAT)
       id: clone
       if: inputs.mode == 'pat'

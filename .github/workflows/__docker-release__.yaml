@@ -67,6 +67,11 @@ on:
         required: false
         default: false
         type: boolean
+      always-bump:
+        required: false
+        default: "true"
+        type: string
+
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -89,11 +94,13 @@ jobs:
           private-key: ${{ secrets.gh-app-private-key }}
           fetch-depth: 0
 
-      # - name: Git config
-      #   id: git-config
-      #   uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
-      #   with:
-      #     git-workdir: ${{ inputs.git-workdir }}
+      - name: Git config
+        id: git-config
+        uses: ixxeL-DevOps/gha-templates/.github/actions/git-config@main
+        with:
+          git-workdir: ${{ inputs.git-workdir }}
+          git-email: ${{ steps.clone.outputs.USER_EMAIL }}
+          git-username: ${{ steps.clone.outputs.USER_NAME }}
 
       - name: Calculate current and next tag
         id: svu
@@ -103,6 +110,7 @@ jobs:
           component: ${{ inputs.component }}
           prerelease: ${{ inputs.prerelease }}
           build: "false"
+          always-bump: ${{ inputs.always-bump }}
 
       - name: Get last tag (Release Candidate)
         id: get-last-tag-rc
