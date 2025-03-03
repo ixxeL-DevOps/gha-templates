@@ -95,7 +95,7 @@ runs:
         fi
 
         echo -e "${YELLOW}[ EXECUTING ] > Calculating current and next tag${BLANK}"
-        CURRENT_TAG=$(svu current --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*${PRERELEASE_PATTERN}")
+        CURRENT_TAG=$(svu current --tag.prefix="${COMPONENT}v" --tag.pattern="${COMPONENT}v[0-9]*.[0-9]*.[0-9]*${PRERELEASE_PATTERN}*")
         if [ $? -ne 0 ]
         then
           CURRENT_TAG=""

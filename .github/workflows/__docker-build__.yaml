@@ -15,6 +15,10 @@ on:
         required: false
     inputs:
       # General
+      retag-binary:
+        required: false
+        type: string
+        default: "crane"
       prerelease:
         required: false
         default: "false"
@@ -169,6 +173,60 @@ jobs:
           password: ${{ secrets.registry-password }}
           logout: false
 
+      - name: Define Docker image tag
+        id: define-tag
+        run: |
+          echo -e "${BLUE}[ STEP - DEFINE TAG ] > Defining target tag${BLANK}"
+          if [[ "${{ inputs.component }}" == '' ]]
+          then
+            TARGET_TAG="sha-${GITHUB_SHA:0:7}"
+          else
+            TARGET_TAG="${{ inputs.component }}-sha-${GITHUB_SHA:0:7}"
+          fi
+          echo -e "${YELLOW}[ INFO ] > Target tag is ${PURPLE}${TARGET_TAG}${BLANK}"
+          echo "TARGET_TAG=${TARGET_TAG}" >> "$GITHUB_OUTPUT"
+        shell: bash
+        env:
+          RED: \033[1;31m
+          GREEN: \033[1;32m
+          YELLOW: \033[1;33m
+          BLUE: \033[1;34m
+          PURPLE: \033[1;35m
+          CYAN: \033[1;36m
+          BLANK: \033[0m
+
+      - name: Define Docker image PR tag
+        id: define-pr-tag
+        if: github.event_name == 'pull_request'
+        run: |
+          echo -e "${BLUE}[ STEP - DEFINE TAG ] > Defining target PR tag${BLANK}"
+          if [[ "${{ inputs.component }}" == '' ]]
+          then
+            TARGET_PR_TAG="pr-${{ github.event.pull_request.number }}"
+          else
+            TARGET_PR_TAG="${{ inputs.component }}-pr-${{ github.event.pull_request.number }}"
+          fi
+          echo -e "${YELLOW}[ INFO ] > Target PR tag is ${PURPLE}${TARGET_PR_TAG}${BLANK}"
+          echo "TARGET_PR_TAG=${TARGET_PR_TAG}" >> "$GITHUB_OUTPUT"
+        shell: bash
+        env:
+          RED: \033[1;31m
+          GREEN: \033[1;32m
+          YELLOW: \033[1;33m
+          BLUE: \033[1;34m
+          PURPLE: \033[1;35m
+          CYAN: \033[1;36m
+          BLANK: \033[0m
+
+      - name: Check PR origin
+        if: github.event_name != 'pull_request'
+        uses: ixxeL-DevOps/gha-templates/.github/actions/gh-pr-origin@main
+        id: pr-origin
+        with:
+          commit: ${{ github.sha }}
+        env:
+          GH_TOKEN: ${{ steps.clone.outputs.TOKEN }}
+
       - name: Build Docker img [PR]
         uses: docker/build-push-action@v5
         if: github.event_name == 'pull_request'
@@ -184,7 +242,7 @@ jobs:
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:pr-${{ github.event.pull_request.number }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.define-pr-tag.outputs.TARGET_PR_TAG }}
 
       - name: Calculate current and next tag
         id: svu
@@ -199,7 +257,7 @@ jobs:
 
       - name: Build Docker img [Trunk]
         uses: docker/build-push-action@v5
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'  && steps.pr-origin.outputs.PR_NUMBER == ''
         with:
           context: ${{ inputs.workingdir }}
           platforms: linux/amd64
@@ -211,5 +269,27 @@ jobs:
           build-args: |
             ${{ inputs.build-arg }}
           tags: |
-            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
+            ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.define-tag.outputs.TARGET_TAG }}
             ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
+
+      - name: Skopeo retag [ Artefact promotion ]
+        if: inputs.retag-binary == 'skopeo' && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
+        uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@main
+        id: skopeo-retag
+        with:
+          registry-url: ${{ inputs.registry-url }}
+          registry-username: ${{ inputs.registry-username }}
+          registry-password: ${{ secrets.registry-password }}
+          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.define-pr-tag.outputs.TARGET_PR_TAG }}
+          dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.define-tag.outputs.TARGET_TAG }}
+
+      - name: Crane retag [ Artefact promotion ]
+        if: inputs.retag-binary == 'crane' && github.event_name != 'pull_request' && steps.pr-origin.outputs.PR_NUMBER != ''
+        uses: ixxeL-DevOps/gha-templates/.github/actions/crane-retag@main
+        id: crane-retag
+        with:
+          registry-url: ${{ inputs.registry-url }}
+          registry-username: ${{ inputs.registry-username }}
+          registry-password: ${{ secrets.registry-password }}
+          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.define-pr-tag.outputs.TARGET_PR_TAG }}
+          dst-tag: ${{ steps.define-tag.outputs.TARGET_TAG }}

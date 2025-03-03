@@ -132,6 +132,39 @@ jobs:
           pattern: "${{ inputs.component }}-v?[0-9]{1,2}\\.[0-9]{1,3}\\.[0-9]{1,3}$"
           starting-tag: ""
 
+      - name: Define Last built SHA
+        id: define-sha
+        run: |
+          echo -e "${BLUE}[ STEP - DEFINE LAST BUILT SHA ] > Defining last SHA${BLANK}"
+          if [[ "${{ inputs.component }}" == '' ]]
+          then
+            git log -n 1 -- ${{ inputs.workingdir }}
+            SHA=$(git log -n 1 --pretty=format:"%H" -- ${{ inputs.workingdir }})
+            LAST_TAG_SHA="sha-${GITHUB_SHA:0:7}"
+          else
+            git log -n 1 -- ${{ inputs.workingdir }}
+            SHA=$(git log -n 1 --pretty=format:"%H" -- ${{ inputs.workingdir }})
+            LAST_TAG_SHA="${{ inputs.component }}-sha-${SHA:0:7}"
+          fi
+          if [[ "${SHA}" != ${{ github.sha }} ]]
+          then
+            echo -e "${YELLOW}[ INFO ] > Last sha is different from current sha ${PURPLE}${LAST_SHA}${BLANK}"
+            echo "LAST_SHA=${SHA}" >> "$GITHUB_OUTPUT"
+          else
+            echo -e "${YELLOW}[ INFO ] > Last sha is same as current sha, using github.ref_name${BLANK}"
+          fi
+          echo -e "${YELLOW}[ INFO ] > Last sha tag is ${PURPLE}${LAST_TAG_SHA}${BLANK}"
+          echo "LAST_TAG_SHA=${LAST_TAG_SHA}" >> "$GITHUB_OUTPUT"
+        shell: bash
+        env:
+          RED: \033[1;31m
+          GREEN: \033[1;32m
+          YELLOW: \033[1;33m
+          BLUE: \033[1;34m
+          PURPLE: \033[1;35m
+          CYAN: \033[1;36m
+          BLANK: \033[0m
+
       - name: Skopeo retag [ Artefact promotion ]
         uses: ixxeL-DevOps/gha-templates/.github/actions/skopeo-retag@main
         id: skopeo-retag
@@ -140,7 +173,7 @@ jobs:
           registry-url: ${{ inputs.registry-url }}
           registry-username: ${{ inputs.registry-username }}
           registry-password: ${{ secrets.registry-password }}
-          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
+          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.define-sha.outputs.LAST_TAG_SHA }}
           dst-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.svu.outputs.NEW_TAG }}
 
       - name: Crane retag [ Artefact promotion ]
@@ -151,7 +184,7 @@ jobs:
           registry-url: ${{ inputs.registry-url }}
           registry-username: ${{ inputs.registry-username }}
           registry-password: ${{ secrets.registry-password }}
-          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:sha-${{ github.sha }}
+          src-img: ${{ inputs.cache-registry }}/${{ inputs.img-name }}:${{ steps.define-sha.outputs.LAST_TAG_SHA }}
           dst-tag: ${{ steps.svu.outputs.NEW_TAG }}
 
       - name: Git tag
@@ -159,7 +192,7 @@ jobs:
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-tag@main
         with:
           tag-value: ${{ steps.svu.outputs.NEW_TAG }}
-          commit-sha: ${{ github.ref_name }}
+          commit-sha: ${{ steps.define-sha.outputs.LAST_SHA || github.ref_name }}
           git-workdir: ${{ inputs.git-workdir }}
           force-tag: "false"
 
