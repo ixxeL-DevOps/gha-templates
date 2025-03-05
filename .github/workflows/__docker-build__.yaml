@@ -123,12 +123,6 @@ jobs:
     #   image: ${{ inputs.build-image }}
     #   options: --privileged
     steps:
-      - name: Merge queue validation
-        if: github.event_name == 'merge_group'
-        run: |
-          echo "Validation merge queue on ${{ github.ref_name }} / ${{ github.event_name }}"
-          exit 0
-
       - name: Clone repo
         id: clone
         uses: ixxeL-DevOps/gha-templates/.github/actions/git-clone@main

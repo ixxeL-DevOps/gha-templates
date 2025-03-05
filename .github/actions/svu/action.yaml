@@ -53,9 +53,9 @@ runs:
         set +e
         mkdir -p target_dir
         LATEST=$(curl -s https://api.github.com/repos/caarlos0/svu/releases/latest | jq -r '.tag_name')
-        wget -q https://github.com/caarlos0/svu/releases/download/${LATEST}/svu_${LATEST#v}_linux_amd64.tar.gz -P target_dir
+        wget -q https://github.com/caarlos0/svu/releases/download/${LATEST}/svu_linux_amd64.tar.gz -P target_dir
         cd target_dir || exit
-        tar -xzvf svu_${LATEST#v}_linux_amd64.tar.gz
+        tar -xzvf svu_linux_amd64.tar.gz
         chmod +x svu
         mv svu /usr/local/bin/
         cd .. || exit
